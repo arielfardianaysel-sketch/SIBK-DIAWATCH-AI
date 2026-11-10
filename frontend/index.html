@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DiaWatch AI - Skrining Risiko Diabetes Cerdas & Akurat</title>
+  <meta name="description"
+    content="Aplikasi skrining risiko diabetes berbasis AI. Deteksi potensi risiko diabetes dalam 3 menit melalui 21 indikator klinis & gaya hidup.">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+  <!-- Header / Navigation Bar (Dynamic Auth State) -->
+  <div id="nav"></div>
+
+  <!-- ==================== GUEST LANDING PAGE (Saat Belum Login) ==================== -->
+  <section id="guest-landing" class="wrap">
+
+    <!-- Hero Section -->
+    <div class="landing-hero">
+      <div class="hero-pill">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+        </svg>
+        <span>AI-Powered Health Screening System</span>
+      </div>
+      <h1 class="hero-title">
+        Deteksi Dini Risiko <span class="highlight">Diabetes Melitus</span> Berbasis Kecerdasan Buatan
+      </h1>
+      <p class="hero-desc">
+        Ketahui tingkat risiko diabetes Anda dalam 3 menit melalui analisis 21 indikator klinis, riwayat tubuh, dan gaya
+        hidup. Praktis, berbasis data ilmiah, dan tanpa jarum suntik.
+      </p>
+      <div class="hero-cta">
+        <a href="auth.html?mode=register" class="btn btn-lg">
+          <span>Mulai Skrining Gratis</span>
+          <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="5" y1="12" x2="19" y2="12" />
+            <polyline points="12 5 19 12 12 19" />
+          </svg>
+        </a>
+        <a href="#cara-kerja" class="btn ghost btn-lg">Pelajari Cara Kerja</a>
+      </div>
+
+      <!-- Quick Metrics Strip -->
+      <div class="hero-stats-row">
+        <div class="stat-card">
+          <div class="stat-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+              <circle cx="9" cy="7" r="4" />
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+              <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+            </svg>
+          </div>
+          <div>
+            <b>19,5 Juta+</b>
+            <p>Penderita diabetes dewasa di Indonesia</p>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10" />
+              <line x1="12" y1="8" x2="12" y2="12" />
+              <line x1="12" y1="16" x2="12.01" y2="16" />
+            </svg>
+          </div>
+          <div>
+            <b>73.7%</b>
+            <p>Tidak menyadari memiliki risiko diabetes</p>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+              <polyline points="22 4 12 14.01 9 11.01" />
+            </svg>
+          </div>
+          <div>
+            <b>80%</b>
+            <p>Komplikasi dapat dicegah lewat deteksi dini</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section: Mengapa Skrining Dini Itu Penting -->
+    <section id="tentang" class="section">
+      <div class="section-head">
+        <span class="section-tag">Mengapa Penting?</span>
+        <h2 class="section-title">Kenapa Anda Perlu Melakukan Skrining?</h2>
+        <p class="section-sub">Diabetes dijuluki <i>"The Silent Killer"</i> karena kerap berkembang tanpa gejala yang
+          disadari sebelum timbul komplikasi parah.</p>
+      </div>
+      <div class="grid-3">
+        <div class="feature-box">
+          <div class="feature-icon-wrap">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10" />
+              <path d="m4.93 4.93 4.24 4.24" />
+              <path d="m14.83 9.17 4.24-4.24" />
+              <path d="m14.83 14.83 4.24 4.24" />
+              <path d="m9.17 14.83-4.24 4.24" />
+            </svg>
+          </div>
+          <h3>Cegah Sebelum Komplikasi</h3>
+          <p>Deteksi risiko diabetes sedini mungkin melindungi organ vital Anda dari risiko stroke, gangguan jantung,
+            gagal ginjal, dan kebutaan.</p>
+        </div>
+        <div class="feature-box">
+          <div class="feature-icon-wrap">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+              <polyline points="14 2 14 8 20 8" />
+              <line x1="16" y1="13" x2="8" y2="13" />
+              <line x1="16" y1="17" x2="8" y2="17" />
+            </svg>
+          </div>
+          <h3>Berbasis Standar Data CDC</h3>
+          <p>Model prediksi dilatih pada dataset survei kesehatan publik CDC BRFSS dengan 21 parameter klinis & perilaku
+            yang teruji secara statistik.</p>
+        </div>
+        <div class="feature-box">
+          <div class="feature-icon-wrap">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+            </svg>
+          </div>
+          <h3>Rekomendasi Preventif</h3>
+          <p>Bukan hanya skor risiko, Anda mendapatkan panduan konkret mengenai pola makan, aktivitas fisik harian, dan
+            anjuran pemeriksaan medis.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section: Cara Kerja -->
+    <section id="cara-kerja" class="section">
+      <div class="section-head">
+        <span class="section-tag">Alur Kerja</span>
+        <h2 class="section-title">3 Langkah Mudah Mengetahui Risiko Anda</h2>
+        <p class="section-sub">Skrining dapat dilakukan mandiri dari laptop atau smartphone kapan saja.</p>
+      </div>
+      <div class="steps-container">
+        <div class="step-card">
+          <div class="step-num">1</div>
+          <h3>Buat Akun & Masuk</h3>
+          <p>Daftarkan akun gratis untuk mengamankan data dan menyimpan riwayat pemantauan kesehatan Anda dari waktu ke
+            waktu.</p>
+        </div>
+        <div class="step-card">
+          <div class="step-num">2</div>
+          <h3>Jawab 21 Pertanyaan Singkat</h3>
+          <p>Kuesioner terbagi dalam 5 tahap singkat: data tubuh (BMI otomatis), riwayat medis, gaya hidup, kondisi
+            fisik, dan sosial.</p>
+        </div>
+        <div class="step-card">
+          <div class="step-num">3</div>
+          <h3>Terima Laporan & Rekomendasi</h3>
+          <p>Dapatkan estimasi probabilitas risiko (Rendah, Sedang, atau Tinggi), identifikasi faktor risiko dominan,
+            dan saran medis edukatif.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section: Fitur Unggulan -->
+    <section id="fitur" class="section">
+      <div class="section-head">
+        <span class="section-tag">Fitur Unggulan</span>
+        <h2 class="section-title">Dirancang untuk Kesehatan Anda</h2>
+        <p class="section-sub">Teknologi modern yang mengutamakan kemudahan penggunaan dan privasi pengguna.</p>
+      </div>
+      <div class="grid-3">
+        <div class="feature-box">
+          <div class="feature-icon-wrap">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M20.24 12.24a6 6 0 0 0-8.49-8.49L5 10.5V19h8.5z" />
+              <line x1="16" y1="8" x2="2" y2="22" />
+              <line x1="17.5" y1="15" x2="9" y2="15" />
+            </svg>
+          </div>
+          <h3>Kalkulator BMI Real-Time</h3>
+          <p>Menghitung indeks massa tubuh secara langsung saat Anda memasukkan berat dan tinggi badan dengan indikator
+            warna kategori.</p>
+        </div>
+        <div class="feature-box">
+          <div class="feature-icon-wrap">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="20" x2="18" y2="10" />
+              <line x1="12" y1="20" x2="12" y2="4" />
+              <line x1="6" y1="20" x2="6" y2="14" />
+            </svg>
+          </div>
+          <h3>Pemantauan Riwayat & Tren</h3>
+          <p>Pantau perkembangan risiko Anda dari skrining ke skrining untuk melihat dampak positif dari perubahan gaya
+            hidup yang telah Anda lakukan.</p>
+        </div>
+        <div class="feature-box">
+          <div class="feature-icon-wrap">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+            </svg>
+          </div>
+          <h3>Privasi & Keamanan Terjaga</h3>
+          <p>Data profil dan hasil tes Anda terenkripsi dan hanya dapat diakses melalui akun Anda sendiri tanpa
+            pembagian ke pihak ketiga.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section: FAQ -->
+    <section id="faq" class="section">
+      <div class="section-head">
+        <span class="section-tag">Tanya Jawab</span>
+        <h2 class="section-title">Pertanyaan yang Sering Diajukan</h2>
+        <p class="section-sub">Informasi penting mengenai cara kerja dan batasan aplikasi DiaWatch AI.</p>
+      </div>
+      <div class="faq-list">
+        <details class="faq-item" open>
+          <summary>Apakah hasil skrining DiaWatch AI merupakan diagnosis medis resmi?</summary>
+          <div class="faq-content">
+            <strong>Bukan.</strong> DiaWatch AI adalah instrumen skrining edukasi preventif berbasis model probabilistik
+            machine learning. Aplikasi ini tidak memeriksa sampel darah secara laboratoris dan tidak menggantikan
+            pemeriksaan fisik langsung oleh dokter.
+          </div>
+        </details>
+        <details class="faq-item">
+          <summary>Siapa saja yang sebaiknya melakukan skrining risiko diabetes?</summary>
+          <div class="faq-content">
+            Setiap orang dewasa berusia 20 tahun ke atas, terutama mereka yang memiliki riwayat keluarga dengan
+            diabetes, berat badan berlebih (overweight/obesitas), tekanan darah tinggi, atau kurang melakukan aktivitas
+            fisik rutin.
+          </div>
+        </details>
+        <details class="faq-item">
+          <summary>Mengapa saya harus mendaftar akun terlebih dahulu?</summary>
+          <div class="faq-content">
+            Dengan mendaftar akun, hasil skrining Anda akan tersimpan rapi dalam riwayat pribadi. Anda dapat
+            membandingkan skor risiko dari waktu ke waktu untuk memantau apakah gaya hidup baru Anda berhasil menurunkan
+            risiko kesehatan Anda.
+          </div>
+        </details>
+        <details class="faq-item">
+          <summary>Apa langkah selanjutnya jika hasil saya menunjukkan risiko sedang atau tinggi?</summary>
+          <div class="faq-content">
+            Kami sangat menganjurkan Anda untuk berkonsultasi dengan dokter umum di puskesmas atau klinik terdekat untuk
+            pemeriksaan laboratorium lanjutan (seperti tes Glukosa Darah Puasa atau HbA1c), serta mulai menerapkan
+            panduan gaya hidup sehat yang disarankan pada laporan.
+          </div>
+        </details>
+      </div>
+    </section>
+
+    <!-- Disclaimer Alert Box -->
+    <div class="disclaimer-box">
+      <div class="disclaimer-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />
+          <line x1="12" y1="9" x2="12" y2="13" />
+          <line x1="12" y1="17" x2="12.01" y2="17" />
+        </svg>
+      </div>
+      <div class="disclaimer-text">
+        <h4>Catatan Medis Penting</h4>
+        <p>Aplikasi ini dirancang semata-mata untuk tujuan edukasi kesadaran dini masyarakat. Hasil analisis bukan
+          merupakan jaminan medis dan tidak boleh digunakan sebagai pengganti diagnosis atau rencana terapi medis
+          formal.</p>
+      </div>
+    </div>
+
+    <!-- Call to Action Banner -->
+    <div class="cta-banner">
+      <h2>Mulai Periksa Risiko Kesehatan Anda Hari Ini</h2>
+      <p>Luangkan waktu beberapa menit demi masa depan yang lebih sehat dan bebas komplikasi penyakit gula.</p>
+      <a href="auth.html?mode=register" class="btn btn-lg">Daftar Akun & Mulai Skrining</a>
+    </div>
+
+  </section>
+
+  <!-- ==================== LOGGED IN USER DASHBOARD (Saat Sudah Login) ==================== -->
+  <section id="user-dashboard" class="wrap hide">
+
+    <!-- Welcome Header -->
+    <div class="dash-welcome">
+      <div class="dash-welcome-text">
+        <h1><span id="dash-greeting">Halo</span>, <span id="dash-user-name">User</span>! 👋</h1>
+        <p>Selamat datang kembali di pusat kendali kesehatan pribadi Anda.</p>
+      </div>
+      <div>
+        <a href="screening.html" class="btn">
+          <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="12" y1="5" x2="12" y2="19" />
+            <line x1="5" y1="12" x2="19" y2="12" />
+          </svg>
+          <span>Mulai Skrining Baru</span>
+        </a>
+      </div>
+    </div>
+
+    <!-- Stats Cards Row -->
+    <div class="dash-stats-grid">
+      <div class="dash-card">
+        <div class="dash-card-header">
+          <span class="dash-card-label">Status Terakhir</span>
+          <div class="dash-card-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+            </svg>
+          </div>
+        </div>
+        <div class="dash-card-val" id="dash-last-risk">Memuat...</div>
+        <span class="dash-card-sub">Kategori probabilitas risiko diabetes</span>
+      </div>
+
+      <div class="dash-card">
+        <div class="dash-card-header">
+          <span class="dash-card-label">Indeks Massa Tubuh (BMI)</span>
+          <div class="dash-card-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10" />
+              <path d="m4.93 4.93 4.24 4.24" />
+              <path d="m14.83 9.17 4.24-4.24" />
+            </svg>
+          </div>
+        </div>
+        <div class="dash-card-val" id="dash-last-bmi">-</div>
+        <span class="dash-card-sub">Berdasarkan data pemeriksaan terakhir</span>
+      </div>
+
+      <div class="dash-card">
+        <div class="dash-card-header">
+          <span class="dash-card-label">Total Skrining</span>
+          <div class="dash-card-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+              <polyline points="14 2 14 8 20 8" />
+            </svg>
+          </div>
+        </div>
+        <div class="dash-card-val" id="dash-total-count">0</div>
+        <span class="dash-card-sub">Pemeriksaan yang telah Anda rekam</span>
+      </div>
+    </div>
+
+    <!-- Action & Recent Box -->
+    <div class="dash-actions-row">
+      <!-- Recent Screening Box -->
+      <div id="dash-recent-box">
+        <div class="card">
+          <p class="note">Memuat data skrining...</p>
+        </div>
+      </div>
+
+      <!-- Quick Tips Card -->
+      <div class="card">
+        <h3 style="margin-bottom:0.75rem;display:flex;align-items:center;gap:0.5rem">
+          <span>💡</span> Tips Pencegahan Hari Ini
+        </h3>
+        <ul
+          style="font-size:0.92rem;color:var(--ink-secondary);display:flex;flex-direction:column;gap:0.6rem;padding-left:1.2rem">
+          <li><b>Aktivitas Fisik:</b> Targetkan minimal 30 menit jalan cepat atau bergerak aktif setiap hari.</li>
+          <li><b>Cukupi Serat:</b> Konsumsi sayuran hijau dan buah segar untuk menjaga stabilitas gula darah.</li>
+          <li><b>Batasi Gula Tambahan:</b> Kurangi minuman manis kemasan, soda, dan camilan tinggi glukosa.</li>
+          <li><b>Periksa Berkala:</b> Lakukan pengecekan tensi & kolesterol secara rutin di fasilitas kesehatan.</li>
+        </ul>
+        <div style="margin-top:1.25rem">
+          <a href="history.html" class="btn ghost btn-sm" style="width:100%">Lihat Seluruh Riwayat</a>
+        </div>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- Global Footer -->
+  <footer class="footer">
+    <div class="footer-container">
+      <div>
+        <b>DiaWatch AI</b> &copy; 2026. Aplikasi Skrining Risiko Diabetes Cerdas.
+        <p class="note" style="margin-top:0.25rem">Alat skrining kesehatan edukatif, bukan diagnosis medis resmi dokter.
+        </p>
+      </div>
+      <div class="footer-links">
+        <a href="index.html">Beranda</a>
+        <a href="index.html#tentang">Tentang</a>
+        <a href="index.html#faq">FAQ</a>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Scripts -->
+  <script src="js/config.js"></script>
+  <script src="js/common.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/home.js"></script>
+</body>
+
+</html>
