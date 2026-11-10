@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Riwayat Skrining & Tren Risiko | DiaWatch AI</title>
+  <meta name="description" content="Pantau riwayat dan tren perubahan skor risiko diabetes Anda dari waktu ke waktu.">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+  <!-- Header / Navigation -->
+  <div id="nav"></div>
+
+  <main class="wrap">
+    <!-- Page Header & Action -->
+    <div
+      style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;margin-bottom:1.75rem">
+      <div>
+        <h1 style="font-size:1.85rem;margin-bottom:0.25rem">Riwayat Skrining Kesehatan</h1>
+        <p class="note">Pantau perkembangan dan tren perubahan estimasi risiko diabetes Anda.</p>
+      </div>
+      <div>
+        <a href="screening.html" class="btn">
+          <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="12" y1="5" x2="12" y2="19" />
+            <line x1="5" y1="12" x2="19" y2="12" />
+          </svg>
+          <span>Skrining Baru</span>
+        </a>
+      </div>
+    </div>
+
+    <!-- History Summary Strip (Injected by history.js if data exists) -->
+    <div id="history-summary" class="dash-stats-grid hide"></div>
+
+    <!-- Main List Container -->
+    <div id="list">
+      <div class="card">
+        <p class="note">Memuat catatan riwayat Anda...</p>
+      </div>
+    </div>
+  </main>
+
+  <!-- Global Footer -->
+  <footer class="footer">
+    <div class="footer-container">
+      <div>
+        <b>DiaWatch AI</b> &copy; 2026. Pantau kesehatan Anda secara berkala.
+      </div>
+      <div class="footer-links">
+        <a href="index.html">Beranda</a>
+        <a href="screening.html">Skrining</a>
+      </div>
+    </div>
+  </footer>
+
+  <script src="js/config.js"></script>
+  <script src="js/common.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/history.js"></script>
+</body>
+
+</html>
