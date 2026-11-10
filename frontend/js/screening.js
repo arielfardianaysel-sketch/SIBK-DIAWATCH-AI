@@ -57,8 +57,16 @@ const STEPS = [
     f: [
       q('AnyHealthcare', 'Memiliki akses asuransi atau jaminan kesehatan (BPJS/Asuransi Swasta)?'),
       q('NoDocbcCost', 'Pernah membatalkan rencana berobat ke dokter karena kendala biaya dalam 12 bulan terakhir?'),
-      sel('Education', 'Tingkat pendidikan formal terakhir', lv(['Tidak sekolah / TK', 'SD', 'SMP', 'SMA / Sederajat', 'Perguruan Tinggi (Diploma/S1 Belum Lulus)', 'Lulus Perguruan Tinggi (Diploma/S1/S2/S3)'])),
-      sel('Income', 'Estimasi pendapatan tahunan rumah tangga', lv(['< $10 ribu', '$10-15 ribu', '$15-20 ribu', '$20-25 ribu', '$25-35 ribu', '$35-50 ribu', '$50-75 ribu', '≥ $75 ribu']), 'Kategori standar dataset BRFSS CDC.')
+      sel('Income', 'Estimasi pendapatan atau gaji per bulan', lv([
+        '< Rp 2.000.000',
+        'Rp 2.000.000 - Rp 4.000.000',
+        'Rp 4.000.000 - Rp 7.000.000',
+        'Rp 7.000.000 - Rp 10.000.000',
+        'Rp 10.000.000 - Rp 15.000.000',
+        'Rp 15.000.000 - Rp 25.000.000',
+        'Rp 25.000.000 - Rp 40.000.000',
+        '≥ Rp 40.000.000'
+      ]), 'Pilih rentang estimasi penghasilan per bulan.')
     ]
   }
 ];
@@ -258,6 +266,11 @@ $('#next').onclick = async () => {
   const session = getSession();
   const birthDate = session && session.user ? session.user.birth_date : '1995-01-01';
   body.Age = ageCategory(birthDate);
+
+  // Nilai default kompatibilitas skema model machine learning (jika backend memerlukan fitur Education)
+  if (body.Education === undefined) {
+    body.Education = 4;
+  }
 
   const nextBtn = $('#next');
   nextBtn.disabled = true;
