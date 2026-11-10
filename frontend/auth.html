@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Masuk & Daftar | DiaWatch AI</title>
+  <meta name="description" content="Masuk atau daftarkan akun DiaWatch AI untuk memulai skrining risiko diabetes dan memantau riwayat kesehatan Anda.">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <!-- Navigation Bar -->
+  <div id="nav"></div>
+
+  <main class="wrap wrap-narrow">
+    <div class="auth-box">
+      <!-- Friendly notification for redirects -->
+      <div id="auth-notice" class="notice-banner hide">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+        <span id="auth-notice-text">Silakan masuk atau daftar terlebih dahulu untuk mengakses fitur ini.</span>
+      </div>
+
+      <!-- Tab Switcher -->
+      <div class="auth-tabs">
+        <button type="button" class="auth-tab active" id="tab-login">Masuk Akun</button>
+        <button type="button" class="auth-tab" id="tab-reg">Daftar Akun Baru</button>
+      </div>
+
+      <!-- Form: Login -->
+      <form id="f-login">
+        <h2 style="font-size:1.4rem;margin-bottom:0.35rem">Selamat Datang Kembali</h2>
+        <p class="note" style="margin-bottom:1.5rem">Masuk untuk melihat riwayat skrining dan memantau kesehatan Anda.</p>
+
+        <div class="form-group">
+          <label for="le">Alamat Email</label>
+          <input id="le" name="email" type="email" placeholder="nama@email.com" required autocomplete="email">
+        </div>
+
+        <div class="form-group">
+          <label for="lp">Kata Sandi</label>
+          <div class="password-input-wrap">
+            <input id="lp" name="password" type="password" placeholder="Masukkan kata sandi" required autocomplete="current-password">
+            <button type="button" class="btn-toggle-pw" data-target="lp" aria-label="Tampilkan kata sandi">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <button class="btn" type="submit" style="width:100%;margin-top:0.75rem">
+          <span>Masuk</span>
+          <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+        </button>
+
+        <p class="note" style="text-align:center;margin-top:1.25rem">
+          Belum punya akun? <a href="#" id="to-reg">Daftar gratis di sini</a>
+        </p>
+      </form>
+
+      <!-- Form: Register -->
+      <form id="f-reg" class="hide">
+        <h2 style="font-size:1.4rem;margin-bottom:0.35rem">Buat Akun Baru</h2>
+        <p class="note" style="margin-bottom:1.5rem">Daftarkan diri Anda untuk mulai melakukan skrining mandiri.</p>
+
+        <div class="form-group">
+          <label for="rn">Nama Lengkap</label>
+          <input id="rn" name="name" type="text" placeholder="Contoh: Budi Santoso" required autocomplete="name">
+        </div>
+
+        <div class="form-group">
+          <label for="re">Alamat Email</label>
+          <input id="re" name="email" type="email" placeholder="nama@email.com" required autocomplete="email">
+        </div>
+
+        <div class="form-group">
+          <label for="rb">Tanggal Lahir</label>
+          <input id="rb" name="birth_date" type="date" required>
+          <span class="hint">Digunakan untuk menghitung kategori kelompok usia (CDC BRFSS).</span>
+        </div>
+
+        <div class="form-group">
+          <label for="rp">Kata Sandi</label>
+          <div class="password-input-wrap">
+            <input id="rp" name="password" type="password" placeholder="Minimal 6 karakter" required minlength="6" autocomplete="new-password">
+            <button type="button" class="btn-toggle-pw" data-target="rp" aria-label="Tampilkan kata sandi">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <button class="btn" type="submit" style="width:100%;margin-top:0.75rem">
+          <span>Daftar Akun</span>
+          <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+        </button>
+
+        <p class="note" style="text-align:center;margin-top:1.25rem">
+          Sudah memiliki akun? <a href="#" id="to-login">Masuk di sini</a>
+        </p>
+      </form>
+
+      <!-- Error feedback alert -->
+      <div id="err" class="err hide" role="alert">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <span id="err-text"></span>
+      </div>
+    </div>
+  </main>
+
+  <!-- Global Footer -->
+  <footer class="footer">
+    <div class="footer-container">
+      <div>
+        <b>DiaWatch AI</b> &copy; 2026. Aplikasi Skrining Risiko Diabetes Cerdas.
+      </div>
+      <div class="footer-links">
+        <a href="index.html">Kembali ke Beranda</a>
+      </div>
+    </div>
+  </footer>
+
+  <script src="js/config.js"></script>
+  <script src="js/common.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/auth.js"></script>
+</body>
+</html>
