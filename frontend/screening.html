@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Skrining Mandiri Risiko Diabetes | DiaWatch AI</title>
+  <meta name="description" content="Lakukan skrining risiko diabetes mandiri berbasis 21 faktor risiko kesehatan terstandar CDC BRFSS.">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <!-- Navigation Header -->
+  <div id="nav"></div>
+
+  <main class="wrap wrap-narrow">
+    <!-- Wizard Header and Step Indicators -->
+    <div class="wizard-header">
+      <div class="wizard-steps-indicator" id="wizard-nodes">
+        <div class="wizard-step-node active" data-step="0">
+          <div class="wizard-step-circle">1</div>
+          <span class="wizard-step-label">Tubuh</span>
+        </div>
+        <div class="wizard-step-node" data-step="1">
+          <div class="wizard-step-circle">2</div>
+          <span class="wizard-step-label">Riwayat</span>
+        </div>
+        <div class="wizard-step-node" data-step="2">
+          <div class="wizard-step-circle">3</div>
+          <span class="wizard-step-label">Gaya Hidup</span>
+        </div>
+        <div class="wizard-step-node" data-step="3">
+          <div class="wizard-step-circle">4</div>
+          <span class="wizard-step-label">Kondisi</span>
+        </div>
+        <div class="wizard-step-node" data-step="4">
+          <div class="wizard-step-circle">5</div>
+          <span class="wizard-step-label">Sosial</span>
+        </div>
+      </div>
+
+      <div class="wizard-progress-bar">
+        <div class="wizard-progress-fill" id="bar" style="width: 20%;"></div>
+      </div>
+
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <span class="note" id="count" style="font-weight:600">Langkah 1 dari 5</span>
+        <span class="note" style="color:var(--pri);font-weight:600">Skrining Interaktif</span>
+      </div>
+    </div>
+
+    <!-- Main Question Card -->
+    <div class="card" style="position:relative">
+      <div id="step"></div>
+
+      <!-- Live BMI Preview Container (Only for Step 1) -->
+      <div id="bmi-preview" class="live-bmi-preview hide">
+        <div>
+          <span style="font-size:0.85rem;color:var(--muted);display:block">Estimasi Indeks Massa Tubuh (BMI)</span>
+          <b id="bmi-val" style="font-size:1.2rem;color:var(--ink)">-</b>
+        </div>
+        <span id="bmi-badge" class="live-bmi-badge pill">Normal</span>
+      </div>
+
+      <!-- Error box -->
+      <div id="err" class="err hide" role="alert">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <span id="err-text"></span>
+      </div>
+
+      <!-- Navigation Buttons -->
+      <div class="row">
+        <button class="btn ghost hide" id="back" type="button">
+          <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+          <span>Kembali</span>
+        </button>
+        <button class="btn" id="next" type="button" style="margin-left:auto">
+          <span id="next-text">Lanjut</span>
+          <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+        </button>
+      </div>
+    </div>
+  </main>
+
+  <!-- Global Footer -->
+  <footer class="footer">
+    <div class="footer-container">
+      <div>
+        <b>DiaWatch AI</b> &copy; 2026. Data Anda tersimpan aman untuk evaluasi berkala.
+      </div>
+      <div class="footer-links">
+        <a href="index.html">Kembali ke Beranda</a>
+      </div>
+    </div>
+  </footer>
+
+  <script src="js/config.js"></script>
+  <script src="js/common.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/screening.js"></script>
+</body>
+</html>
