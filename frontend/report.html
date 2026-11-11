@@ -1,42 +1,240 @@
+
 <!DOCTYPE html>
 <html lang="id">
+
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Berkas Rekam Medis Skrining Risiko Diabetes | DiaWatch AI</title>
-  <meta name="description" content="Laporan resmi hasil skrining dan anamnesis risiko diabetes melitus berbasis kecerdasan buatan.">
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1.0">
+
+  <title>Detail Laporan Skrining | DiaWatch AI</title>
+
+  <meta name="description"
+        content="Lihat hasil, jawaban kuesioner, dan rekomendasi skrining DiaWatch AI.">
+
   <link rel="stylesheet" href="css/style.css">
+
+  <style>
+    .report-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 1rem;
+      margin-bottom: 1.75rem;
+    }
+
+    .report-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .report-stat {
+      padding: 1.5rem;
+    }
+
+    .report-stat-label {
+      font-size: .85rem;
+      color: var(--muted, #64748b);
+      margin-bottom: .5rem;
+    }
+
+    .report-stat-value {
+      font-size: 1.25rem;
+      font-weight: 700;
+      line-height: 1.4;
+    }
+
+    .report-section {
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .report-section h2 {
+      margin-bottom: .5rem;
+      font-size: 1.3rem;
+    }
+
+    .answer-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 1rem;
+      padding: .8rem 0;
+      border-bottom: 1px solid rgba(128,128,128,.15);
+    }
+
+    .answer-row:last-child {
+      border-bottom: none;
+    }
+
+    .answer-value {
+      font-weight: 600;
+      text-align: right;
+      overflow-wrap: anywhere;
+    }
+
+    .recommendation-item {
+      padding: 1rem;
+      margin-top: 1rem;
+      border: 1px solid rgba(128,128,128,.18);
+      border-radius: 12px;
+    }
+
+    .recommendation-item h3 {
+      margin-bottom: .5rem;
+      font-size: 1.05rem;
+    }
+
+    .recommendation-item p {
+      margin-bottom: .5rem;
+    }
+
+    .report-disclaimer {
+      border-left: 3px solid var(--pri, #2563eb);
+    }
+
+    @media (max-width: 720px) {
+      .report-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .answer-row {
+        flex-direction: column;
+        gap: .35rem;
+      }
+
+      .answer-value {
+        text-align: left;
+      }
+    }
+
+    @media print {
+      #nav,
+      .report-actions,
+      .footer {
+        display: none !important;
+      }
+
+      .report-section,
+      .report-stat {
+        break-inside: avoid;
+      }
+    }
+  </style>
 </head>
+
 <body>
-  <!-- Header / Nav -->
+
   <div id="nav"></div>
 
-  <!-- Medical Document Container (A4-like 2 Pages) -->
-  <main class="wrap-doc">
-    <!-- Content injected by report.js -->
-    <div id="out">
-      <div class="card" style="text-align:center;padding:3.5rem 1.5rem">
-        <p class="note" style="font-size:1.05rem">Memuat dan menyusun berkas rekam medis Anda...</p>
+  <main class="wrap">
+
+    <div class="report-header">
+      <div>
+        <h1 style="font-size:1.85rem">
+          Detail Laporan Skrining
+        </h1>
+
+        <p class="note">
+          Hasil pemeriksaan dan jawaban
+          kuesioner kesehatan Anda.
+        </p>
+      </div>
+
+      <div class="report-actions"
+           style="display:flex;gap:.5rem;flex-wrap:wrap">
+
+        <a href="history.html" class="btn ghost">
+          Kembali ke Riwayat
+        </a>
+
+        <button id="print-report"
+                class="btn"
+                type="button">
+          Cetak Laporan
+        </button>
+
       </div>
     </div>
+
+    <!-- Loading atau pesan error -->
+    <div id="report-state" class="card report-section">
+      <p class="note">Memuat detail laporan...</p>
+    </div>
+
+    <!-- Ditampilkan setelah data berhasil diambil -->
+    <div id="report-content" hidden>
+
+      <div id="report-summary"
+           class="report-grid">
+      </div>
+
+      <section class="card report-section">
+        <h2>Penjelasan Hasil</h2>
+        <div id="report-explanation"></div>
+      </section>
+
+      <section class="card report-section">
+        <h2>Jawaban Kuesioner</h2>
+
+        <p class="note">
+          Jawaban yang Anda berikan saat
+          melakukan skrining ini.
+        </p>
+
+        <div id="report-answers"></div>
+      </section>
+
+      <section class="card report-section">
+        <h2>Rekomendasi Personal</h2>
+
+        <p class="note">
+          Saran kesehatan berdasarkan jawaban
+          kuesioner pada pemeriksaan ini.
+        </p>
+
+        <div id="report-recommendations"></div>
+      </section>
+
+      <section class="card report-section report-disclaimer">
+        <h2>Informasi Penting</h2>
+
+        <p class="note">
+          DiaWatch AI adalah prototipe skrining
+          akademik berbasis data survei kesehatan.
+          Hasil klasifikasi bukan diagnosis medis
+          maupun probabilitas seseorang akan
+          terkena diabetes di masa depan.
+          Konsultasikan kondisi kesehatan dengan
+          tenaga kesehatan untuk pemeriksaan
+          dan penilaian lebih lanjut.
+        </p>
+      </section>
+
+    </div>
+
   </main>
 
-  <!-- Global Footer (Screen only) -->
   <footer class="footer">
     <div class="footer-container">
       <div>
-        <b>DiaWatch AI Clinical Intelligence</b> &copy; 2026. Berkas rekam penapisan risiko kesehatan digital.
+        <b>DiaWatch AI</b> &copy; 2026.
+        Pantau kesehatan Anda secara berkala.
       </div>
+
       <div class="footer-links">
         <a href="index.html">Beranda</a>
-        <a href="history.html">Riwayat Skrining</a>
+        <a href="history.html">Riwayat</a>
       </div>
     </div>
   </footer>
 
   <script src="js/config.js"></script>
   <script src="js/common.js"></script>
-  <script type="module" src="js/api.js"></script>
   <script type="module" src="js/report.js"></script>
+
 </body>
 </html>
