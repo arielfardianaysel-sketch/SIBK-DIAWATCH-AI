@@ -47,10 +47,11 @@ const API = (() => {
       if (!m) throw new Error('Email atau kata sandi salah.');
       return { token: 'mock-' + Date.now(), user: { name: m.name, email: m.email, birth_date: m.birth_date } };
     },
-    async predict(a) {
+    async predict(a, meta) {
       if (!CFG.USE_MOCK) return http('/predict', a);
       await wait(900); const r = { id: String(Date.now()), created_at: new Date().toISOString(), ...mockPredict(a) };
-      const k = 'dw_hist_' + getSession().user.email, h = db(k, '[]'); h.unshift({ id: r.id, created_at: r.created_at, answers: a, result: r });
+      const full = meta ? { ...a, ...meta } : a;
+      const k = 'dw_hist_' + getSession().user.email, h = db(k, '[]'); h.unshift({ id: r.id, created_at: r.created_at, answers: full, result: r });
       save(k, h); return r;
     },
     async history() {

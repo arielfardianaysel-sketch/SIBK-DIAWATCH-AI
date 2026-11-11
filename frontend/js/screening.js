@@ -1,5 +1,5 @@
 /**
- * DiaWatch AI - Multi-Step Screening Wizard
+ * DiaWatch AI - Multi-Step Screening Wizard Controller
  */
 // Protect route: user must be logged in
 guard();
@@ -11,62 +11,44 @@ const lv = (a) => a.map((l, i) => [String(i + 1), l]);
 
 const STEPS = [
   {
-    title: 'Data Tubuh & Profil Fisik',
-    sub: 'Informasi dasar untuk menghitung indeks massa tubuh (BMI) dan kategori usia.',
+    title: 'Data Tubuh & Pengukuran Fisik',
+    sub: 'Informasi dasar antropometri untuk menghitung Indeks Massa Tubuh (BMI) dan kategori usia klinis Anda.',
     f: [
-      sel('Sex', 'Jenis Kelamin', [['0', 'Perempuan'], ['1', 'Laki-laki']]),
-      { name: 'height', text: 'Tinggi Badan (cm)', t: 'num', min: 100, max: 230, placeholder: 'Contoh: 168' },
-      { name: 'weight', text: 'Berat Badan (kg)', t: 'num', min: 30, max: 250, placeholder: 'Contoh: 65' }
+      sel('Sex', 'Jenis Kelamin Biologis', [['0', 'Perempuan'], ['1', 'Laki-laki']], 'Digunakan untuk kalkulasi faktor metabolik.'),
+      { name: 'height', text: 'Tinggi Badan', t: 'num', min: 100, max: 230, unit: 'cm', placeholder: 'Contoh: 170' },
+      { name: 'weight', text: 'Berat Badan', t: 'num', min: 30, max: 250, unit: 'kg', placeholder: 'Contoh: 68' }
     ]
   },
   {
     title: 'Riwayat Kesehatan Klinis',
-    sub: 'Kondisi medis yang pernah didiagnosis oleh dokter atau fasilitas kesehatan.',
+    sub: 'Kondisi riwayat medis Anda yang pernah didiagnosis oleh dokter atau fasilitas kesehatan.',
     f: [
-      q('HighBP', 'Pernah didiagnosis tekanan darah tinggi (hipertensi)?'),
-      q('HighChol', 'Pernah didiagnosis kadar kolesterol darah tinggi?'),
-      q('CholCheck', 'Pernah melakukan cek kolesterol dalam 5 tahun terakhir?'),
-      q('Stroke', 'Pernah mengalami serangan stroke?'),
+      q('HighBP', 'Pernah didiagnosis tekanan darah tinggi (hipertensi)?', 'Tekanan darah di atas batas normal.'),
+      q('HighChol', 'Pernah didiagnosis kadar kolesterol darah tinggi (hiperkolesterolemia)?'),
+      q('CholCheck', 'Pernah melakukan cek kadar kolesterol dalam 5 tahun terakhir?'),
+      q('Stroke', 'Pernah mengalami serangan stroke atau gangguan pembuluh darah otak?'),
       q('HeartDiseaseorAttack', 'Pernah didiagnosis penyakit jantung koroner atau serangan jantung?')
     ]
   },
   {
     title: 'Pola & Kebiasaan Gaya Hidup',
-    sub: 'Aktivitas fisik harian, pola makan sayur/buah, dan kebiasaan konsumsi.',
+    sub: 'Aktivitas fisik harian, konsumsi gizi sayur/buah, dan kebiasaan konsumsi harian Anda.',
     f: [
-      q('Smoker', 'Pernah merokok minimal 100 batang selama seumur hidup?'),
-      q('PhysActivity', 'Melakukan olahraga atau aktivitas fisik dalam 30 hari terakhir?', 'Di luar aktivitas pekerjaan harian rutin'),
+      q('Smoker', 'Pernah merokok minimal 100 batang selama seumur hidup?', 'Termasuk riwayat merokok di masa lalu.'),
+      q('PhysActivity', 'Melakukan olahraga atau aktivitas fisik dalam 30 hari terakhir?', 'Di luar aktivitas pekerjaan harian rutin (misal jalan santai, senam, dll).'),
       q('Fruits', 'Mengonsumsi buah minimal satu kali setiap hari?'),
-      q('Veggies', 'Mengonsumsi sayuran minimal satu kali setiap hari?'),
-      q('HvyAlcoholConsump', 'Mengonsumsi alkohol dalam jumlah berlebih?', 'Lebih dari 14 gelas per minggu (pria) atau 7 gelas (wanita)')
+      q('Veggies', 'Mengonsumsi sayuran hijau atau sayur mayur setiap hari?'),
+      q('HvyAlcoholConsump', 'Mengonsumsi alkohol dalam jumlah berlebih?', 'Lebih dari 14 gelas per minggu (pria) atau 7 gelas (wanita).')
     ]
   },
   {
     title: 'Kondisi Kesehatan Fisik & Mental',
-    sub: 'Evaluasi kebugaran dan hari-hari di mana kondisi Anda kurang optimal.',
+    sub: 'Evaluasi kebugaran umum dan jumlah hari di mana kondisi Anda terasa kurang optimal.',
     f: [
-      sel('GenHlth', 'Secara umum, bagaimana Anda menilai kondisi kesehatan Anda?', lv(['Sangat Baik', 'Baik', 'Cukup', 'Kurang Baik', 'Buruk'])),
-      { name: 'MentHlth', text: 'Jumlah hari kesehatan mental terasa kurang baik', hint: 'Termasuk stres, depresi, atau cemas (dalam 30 hari terakhir)', t: 'num', min: 0, max: 30, placeholder: '0 - 30 hari' },
-      { name: 'PhysHlth', text: 'Jumlah hari kondisi fisik terganggu oleh sakit/cedera', hint: 'Dalam 30 hari terakhir', t: 'num', min: 0, max: 30, placeholder: '0 - 30 hari' },
+      sel('GenHlth', 'Secara umum, bagaimana Anda menilai kondisi kesehatan Anda saat ini?', lv(['Sangat Baik', 'Baik', 'Cukup', 'Kurang Baik', 'Buruk'])),
+      { name: 'MentHlth', text: 'Jumlah hari kesehatan mental terasa kurang baik', hint: 'Termasuk stres, depresi, atau cemas (dalam 30 hari terakhir)', t: 'num', min: 0, max: 30, unit: 'hari', placeholder: '0 - 30' },
+      { name: 'PhysHlth', text: 'Jumlah hari kondisi fisik terganggu oleh sakit atau cedera', hint: 'Dalam 30 hari terakhir', t: 'num', min: 0, max: 30, unit: 'hari', placeholder: '0 - 30' },
       q('DiffWalk', 'Apakah Anda mengalami kesulitan berjalan atau menaiki tangga?')
-    ]
-  },
-  {
-    title: 'Akses Layanan & Sosio-Ekonomi',
-    sub: 'Parameter sosio-demografis yang berhubungan dengan disparitas risiko kesehatan.',
-    f: [
-      q('AnyHealthcare', 'Memiliki akses asuransi atau jaminan kesehatan (BPJS/Asuransi Swasta)?'),
-      q('NoDocbcCost', 'Pernah membatalkan rencana berobat ke dokter karena kendala biaya dalam 12 bulan terakhir?'),
-      sel('Income', 'Estimasi pendapatan atau gaji per bulan', lv([
-        '< Rp 2.000.000',
-        'Rp 2.000.000 - Rp 4.000.000',
-        'Rp 4.000.000 - Rp 7.000.000',
-        'Rp 7.000.000 - Rp 10.000.000',
-        'Rp 10.000.000 - Rp 15.000.000',
-        'Rp 15.000.000 - Rp 25.000.000',
-        'Rp 25.000.000 - Rp 40.000.000',
-        '≥ Rp 40.000.000'
-      ]), 'Pilih rentang estimasi penghasilan per bulan.')
     ]
   }
 ];
@@ -74,13 +56,17 @@ const STEPS = [
 let cur = 0;
 const ans = {};
 
-function fieldHtml(f) {
+function fieldHtml(f, idx) {
   const hintText = f.hint ? `<span class="hint">${f.hint}</span>` : '';
+  const qNum = idx != null ? `<span class="q-badge">${idx + 1}</span>` : '';
 
   if (f.t === 'yn') {
     return `
       <div class="q-block">
-        <div class="q-label">${f.text}${hintText}</div>
+        <div class="q-header-row">
+          ${qNum}
+          <div class="q-label">${f.text}${hintText}</div>
+        </div>
         <div class="yn">
           ${YN.map(([val, label]) => `
             <label>
@@ -99,8 +85,14 @@ function fieldHtml(f) {
   if (f.t === 'sel') {
     return `
       <div class="q-block">
-        <label for="${f.name}">${f.text}${hintText}</label>
-        <select id="${f.name}" name="${f.name}">
+        <div class="q-header-row">
+          ${qNum}
+          <div style="flex:1">
+            <label for="${f.name}" style="margin-bottom:0.25rem">${f.text}</label>
+            ${hintText}
+          </div>
+        </div>
+        <select id="${f.name}" name="${f.name}" style="margin-top:0.4rem">
           <option value="">-- Pilih salah satu opsi --</option>
           ${f.opts.map(([val, label]) => `
             <option value="${val}" ${ans[f.name] === val ? 'selected' : ''}>${label}</option>
@@ -110,10 +102,20 @@ function fieldHtml(f) {
     `;
   }
 
+  // Number input
   return `
     <div class="q-block">
-      <label for="${f.name}">${f.text}${hintText}</label>
-      <input id="${f.name}" name="${f.name}" type="number" min="${f.min}" max="${f.max}" placeholder="${f.placeholder || ''}" inputmode="numeric" value="${ans[f.name] ?? ''}">
+      <div class="q-header-row">
+        ${qNum}
+        <div style="flex:1">
+          <label for="${f.name}" style="margin-bottom:0.25rem">${f.text}</label>
+          ${hintText}
+        </div>
+      </div>
+      <div class="input-with-unit" style="margin-top:0.4rem">
+        <input id="${f.name}" name="${f.name}" type="number" min="${f.min}" max="${f.max}" placeholder="${f.placeholder || ''}" inputmode="numeric" value="${ans[f.name] ?? ''}">
+        ${f.unit ? `<span class="input-unit-label">${f.unit}</span>` : ''}
+      </div>
     </div>
   `;
 }
@@ -148,21 +150,21 @@ function updateLiveBmi() {
 
   if (h >= 100 && h <= 230 && w >= 30 && w <= 250) {
     const bmi = +(w / ((h / 100) ** 2)).toFixed(1);
-    let statusText = 'Normal';
+    let statusText = 'Berat Badan Normal / Ideal';
     let statusClass = 'rendah';
 
     if (bmi < 18.5) {
-      statusText = 'Berat Kurang';
+      statusText = 'Berat Badan Kurang (Underweight)';
       statusClass = 'sedang';
     } else if (bmi >= 25 && bmi < 30) {
-      statusText = 'Kelebihan Berat Badan';
+      statusText = 'Kelebihan Berat Badan (Overweight)';
       statusClass = 'sedang';
     } else if (bmi >= 30) {
-      statusText = 'Obesitas';
+      statusText = 'Obesitas (Obese)';
       statusClass = 'tinggi';
     }
 
-    $('#bmi-val').textContent = `${bmi} kg/m²`;
+    $('#bmi-val').textContent = bmi;
     const badge = $('#bmi-badge');
     badge.textContent = statusText;
     badge.className = `live-bmi-badge pill ${statusClass}`;
@@ -176,14 +178,34 @@ function draw() {
   const s = STEPS[cur];
   updateStepIndicator();
 
+  let fieldsHtml = '';
+  if (cur === 0) {
+    // Step 0: Sex + 2-col Height & Weight
+    const sexField = s.f[0];
+    const heightField = s.f[1];
+    const weightField = s.f[2];
+
+    fieldsHtml = `
+      ${fieldHtml(sexField, 0)}
+      <div class="form-grid-2col">
+        ${fieldHtml(heightField, 1)}
+        ${fieldHtml(weightField, 2)}
+      </div>
+    `;
+  } else {
+    fieldsHtml = s.f.map((f, i) => fieldHtml(f, i)).join('');
+  }
+
   $('#step').innerHTML = `
-    <h2 style="font-size:1.45rem;margin-bottom:0.35rem">${s.title}</h2>
-    <p class="note" style="margin-bottom:1.5rem">${s.sub}</p>
-    ${s.f.map(fieldHtml).join('')}
+    <div style="margin-bottom:1.75rem">
+      <h2 style="font-size:1.5rem;margin-bottom:0.35rem;color:var(--ink)">${s.title}</h2>
+      <p class="note" style="color:var(--muted);line-height:1.6">${s.sub}</p>
+    </div>
+    ${fieldsHtml}
   `;
 
   $('#back').classList.toggle('hide', cur === 0);
-  $('#next-text').textContent = cur === STEPS.length - 1 ? 'Analisis Risiko Sekarang' : 'Lanjut';
+  $('#next-text').textContent = cur === STEPS.length - 1 ? 'Analisis Risiko dengan AI Sekarang' : 'Lanjut ke Tahap Berikutnya';
   $('#err').classList.add('hide');
 
   // Attach live listener for BMI inputs in Step 0
@@ -267,21 +289,24 @@ $('#next').onclick = async () => {
   const birthDate = session && session.user ? session.user.birth_date : '1995-01-01';
   body.Age = ageCategory(birthDate);
 
-  // Nilai default kompatibilitas skema model machine learning (jika backend memerlukan fitur Education)
-  if (body.Education === undefined) {
-    body.Education = 4;
-  }
+  // Nilai default kompatibilitas skema model machine learning (BRFSS 21 features)
+  if (body.Education === undefined) body.Education = 4;
+  if (body.AnyHealthcare === undefined) body.AnyHealthcare = 1;
+  if (body.NoDocbcCost === undefined) body.NoDocbcCost = 0;
+  if (body.Income === undefined) body.Income = 5;
+
+  const fullAnswers = { ...body, height: h, weight: w };
 
   const nextBtn = $('#next');
   nextBtn.disabled = true;
-  $('#next-text').textContent = 'Menganalisis dengan AI...';
+  $('#next-text').textContent = 'Memproses Analisis Kecerdasan Buatan...';
 
   try {
-    const result = await API.predict(body);
+    const result = await API.predict(body, { height: h, weight: w });
     sessionStorage.setItem('dw_last', JSON.stringify({
       id: result.id,
       created_at: result.created_at,
-      answers: body,
+      answers: fullAnswers,
       result: result
     }));
     location.href = 'report.html';
@@ -289,7 +314,7 @@ $('#next').onclick = async () => {
     errText.textContent = err.message || 'Gagal memproses analisis skrining.';
     errBox.classList.remove('hide');
     nextBtn.disabled = false;
-    $('#next-text').textContent = 'Analisis Risiko Sekarang';
+    $('#next-text').textContent = 'Analisis Risiko dengan AI Sekarang';
   }
 };
 
