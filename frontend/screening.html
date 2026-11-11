@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Skrining Mandiri Risiko Diabetes | DiaWatch AI</title>
+  <title>Kuesioner Skrining Risiko Diabetes | DiaWatch AI</title>
   <meta name="description" content="Lakukan skrining risiko diabetes mandiri berbasis faktor risiko kesehatan terstandar CDC BRFSS.">
   <link rel="stylesheet" href="css/style.css">
 </head>
@@ -12,16 +12,28 @@
   <div id="nav"></div>
 
   <main class="wrap wrap-narrow">
+    <!-- Form Page Title -->
+    <div style="text-align:center;margin-bottom:2rem">
+      <div class="hero-pill" style="margin-bottom:0.75rem">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+        <span>Kuesioner Medis Terstandar CDC BRFSS</span>
+      </div>
+      <h1 style="font-size:1.85rem;margin-bottom:0.4rem">Skrining Mandiri Risiko Diabetes</h1>
+      <p class="note" style="max-width:540px;margin:0 auto">
+        Jawablah pertanyaan berikut dengan jujur sesuai kondisi aktual tubuh dan kebiasaan harian Anda.
+      </p>
+    </div>
+
     <!-- Wizard Header and Step Indicators -->
     <div class="wizard-header">
       <div class="wizard-steps-indicator" id="wizard-nodes">
         <div class="wizard-step-node active" data-step="0">
           <div class="wizard-step-circle">1</div>
-          <span class="wizard-step-label">Tubuh</span>
+          <span class="wizard-step-label">Data Tubuh</span>
         </div>
         <div class="wizard-step-node" data-step="1">
           <div class="wizard-step-circle">2</div>
-          <span class="wizard-step-label">Riwayat</span>
+          <span class="wizard-step-label">Riwayat Klinis</span>
         </div>
         <div class="wizard-step-node" data-step="2">
           <div class="wizard-step-circle">3</div>
@@ -29,51 +41,71 @@
         </div>
         <div class="wizard-step-node" data-step="3">
           <div class="wizard-step-circle">4</div>
-          <span class="wizard-step-label">Kondisi</span>
-        </div>
-        <div class="wizard-step-node" data-step="4">
-          <div class="wizard-step-circle">5</div>
-          <span class="wizard-step-label">Sosial</span>
+          <span class="wizard-step-label">Kondisi Fisik</span>
         </div>
       </div>
 
       <div class="wizard-progress-bar">
-        <div class="wizard-progress-fill" id="bar" style="width: 20%;"></div>
+        <div class="wizard-progress-fill" id="bar" style="width: 25%;"></div>
       </div>
 
       <div style="display:flex;justify-content:space-between;align-items:center">
-        <span class="note" id="count" style="font-weight:600">Langkah 1 dari 5</span>
-        <span class="note" style="color:var(--pri);font-weight:600">Skrining Interaktif</span>
+        <span class="note" id="count" style="font-weight:700;color:var(--ink)">Langkah 1 dari 4: Data Tubuh</span>
+        <span class="note" style="color:var(--pri);font-weight:700">Skrining Interaktif (4 Tahapan)</span>
       </div>
     </div>
 
-    <!-- Main Question Card -->
-    <div class="card" style="position:relative">
+    <!-- Main Card containing dynamic questions -->
+    <div class="card" style="padding:2rem 2.25rem">
       <div id="step"></div>
 
-      <!-- Live BMI Preview Container (Only for Step 1) -->
+      <!-- Live Interactive Antropometry BMI Widget (Only in Step 0) -->
       <div id="bmi-preview" class="live-bmi-preview hide">
-        <div>
-          <span style="font-size:0.85rem;color:var(--muted);display:block">Estimasi Indeks Massa Tubuh (BMI)</span>
-          <b id="bmi-val" style="font-size:1.2rem;color:var(--ink)">-</b>
+        <div class="bmi-top-row">
+          <div>
+            <span style="font-size:0.82rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;display:block">
+              Hasil Kalkulasi Indeks Massa Tubuh (BMI)
+            </span>
+            <div class="bmi-score-display">
+              <span id="bmi-val" class="bmi-num">-</span>
+              <span class="bmi-unit">kg/m²</span>
+            </div>
+          </div>
+          <div>
+            <span id="bmi-badge" class="live-bmi-badge pill rendah">Normal</span>
+          </div>
         </div>
-        <span id="bmi-badge" class="live-bmi-badge pill">Normal</span>
+
+        <!-- Segmented Spectrum Indicator -->
+        <div class="bmi-spectrum-bar">
+          <div class="spectrum-seg seg-under" title="Kurus (< 18.5)"></div>
+          <div class="spectrum-seg seg-normal" title="Normal (18.5 - 24.9)"></div>
+          <div class="spectrum-seg seg-over" title="Kelebihan (25.0 - 29.9)"></div>
+          <div class="spectrum-seg seg-obese" title="Obesitas (≥ 30.0)"></div>
+        </div>
+
+        <div class="bmi-scale-labels">
+          <span>&lt; 18.5 (Kurus)</span>
+          <span>18.5 - 24.9 (Ideal)</span>
+          <span>25.0 - 29.9 (Berlebih)</span>
+          <span>&ge; 30 (Obesitas)</span>
+        </div>
       </div>
 
-      <!-- Error box -->
+      <!-- Error alert box -->
       <div id="err" class="err hide" role="alert">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
         <span id="err-text"></span>
       </div>
 
-      <!-- Navigation Buttons -->
-      <div class="row">
+      <!-- Navigation Row -->
+      <div class="row" style="margin-top:2rem;padding-top:1.5rem;border-top:1px solid var(--line-light)">
         <button class="btn ghost hide" id="back" type="button">
           <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
           <span>Kembali</span>
         </button>
         <button class="btn" id="next" type="button" style="margin-left:auto">
-          <span id="next-text">Lanjut</span>
+          <span id="next-text">Lanjut ke Tahap Berikutnya</span>
           <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
         </button>
       </div>
