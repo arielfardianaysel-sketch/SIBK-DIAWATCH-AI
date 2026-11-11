@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DiaWatch — Tes integrasi Supabase + FastAPI</title>
+  <style>
+  body{font:16px/1.5 system-ui,sans-serif;margin:2rem auto;max-width:760px;padding:0 1rem;background:#f5f8f9;color:#11263d}
+  section{background:#fff;border:1px solid #d8e6e9;border-radius:12px;padding:20px;margin:16px 0}
+  input{display:block;box-sizing:border-box;margin:10px 0;padding:12px;width:100%;max-width:420px;border:1px solid #bacbd0;border-radius:8px}
+  button{background:#008f81;color:#fff;border:0;padding:10px 16px;margin:5px 5px 5px 0;border-radius:8px;cursor:pointer}
+  button:focus-visible{outline:3px solid #191919}
+  pre{background:#102631;color:#f6fbfa;border-radius:8px;padding:14px;white-space:pre-wrap;word-break:break-word;min-height:80px}
+  .note{color:#415969}
+  </style>
+</head>
+<body>
+  <h1>DiaWatch — Tes Integrasi</h1>
+  <p class="note">Halaman khusus pengujian. Jangan masukkan data kesehatan asli. Token dan password tidak ditampilkan.</p>
+  <section>
+    <h2>1. Koneksi FastAPI</h2>
+    <button id="health">Tes /health</button>
+  </section>
+  <section>
+    <h2>2. Register dan login Supabase</h2>
+    <label>Nama tampilan<input id="name" placeholder="Pengguna Uji"></label>
+    <label>Email uji<input id="email" type="email" autocomplete="email" placeholder="email@contoh.com"></label>
+    <label>Password<input id="password" type="password" autocomplete="current-password" placeholder="Min. 8 karakter"></label>
+    <button id="register">Register</button>
+    <button id="login">Login</button>
+    <button id="user">Cek akun dan profil</button>
+    <button id="logout">Logout</button>
+    <p class="note">Jika konfirmasi email aktif, buka email dan klik link verifikasi sebelum login. Pastikan Site URL di Supabase sesuai alamat lokal.</p>
+  </section>
+  <section>
+    <h2>3. Koneksi History</h2>
+    <button id="history">Tes GET /api/history</button>
+    <p class="note">Hasil <code>items: []</code> adalah sukses jika belum pernah menyimpan skrining. Tes ini tidak membutuhkan Qwen.</p>
+  </section>
+  <section>
+    <h2>Hasil pengujian</h2>
+    <pre id="result" aria-live="polite">Klik tombol tes untuk mulai.</pre>
+  </section>
+<script type="module">
+import { registerUser, loginUser, logoutUser, currentUser, getMyProfile, getBackendHealth, getHistory } from './js/diawatch-supabase.js';
+const out = document.getElementById('result');
+function show(value) { out.textContent = typeof value === 'string' ? value : JSON.stringify(value, null, 2); }
+const val = id => document.getElementById(id).value.trim();
+async function action(fn) { try { show('Memproses...'); await fn(); } catch(e) { show(`GAGAL: ${e.message}`); } }
+document.getElementById('health').onclick = () => action(async () => show(await getBackendHealth()));
+document.getElementById('register').onclick = () => action(async () => {
+  const result = await registerUser(val('email'), val('password'), val('name'));
+  show(result.session ? 'Registrasi berhasil dan sesi tersedia.' : 'Registrasi dikirim. Periksa email untuk konfirmasi jika diwajibkan.');
+});
+document.getElementById('login').onclick = () => action(async () => {
+  await loginUser(val('email'), val('password')); show('LOGIN BERHASIL. Kini coba Cek akun dan Tes History.');
+});
+document.getElementById('logout').onclick = () => action(async () => { await logoutUser(); show('Logout berhasil.'); });
+document.getElementById('user').onclick = () => action(async () => {
+  const user = await currentUser();
+  if (!user) { show('Belum login.'); return; }
+  const profile = await getMyProfile();
+  show({ user_id: user.id, email: user.email, profile });
+});
+document.getElementById('history').onclick = () => action(async () => {
+  const rows = await getHistory(); show({ status: 'OK — koneksi JWT/FastAPI/Supabase berhasil', total: rows.length, items: rows });
+});
+</script>
+</body>
+</html>

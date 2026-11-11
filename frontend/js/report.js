@@ -1,6 +1,9 @@
 /**
  * DiaWatch AI - Authentic 2-Page Medical Examination Document Controller
+ * Terintegrasi dengan GET /api/history/{id} (getHistoryDetail) pada FastAPI Backend.
  */
+import { getHistoryDetail, normalizeHistoryItem, LABEL } from "./api.js";
+
 // Protect route
 guard();
 
@@ -16,10 +19,21 @@ guard();
   let rec = null;
   try {
     if (id) {
-      const historyList = await API.history();
-      rec = historyList.find((h) => String(h.id) === String(id));
+      try {
+        const rawDetail = await getHistoryDetail(id);
+        rec = normalizeHistoryItem(rawDetail);
+      } catch (fetchErr) {
+        // Fallback ke sessionStorage bila baru saja selesai skrining
+        const cached = JSON.parse(sessionStorage.getItem('dw_last') || 'null');
+        if (cached && String(cached.id) === String(id)) {
+          rec = normalizeHistoryItem(cached);
+        } else {
+          throw fetchErr;
+        }
+      }
     } else {
-      rec = JSON.parse(sessionStorage.getItem('dw_last') || 'null');
+      const cached = JSON.parse(sessionStorage.getItem('dw_last') || 'null');
+      if (cached) rec = normalizeHistoryItem(cached);
     }
   } catch (err) {
     container.innerHTML = `
@@ -50,30 +64,36 @@ guard();
 
   const ans = rec.answers || {};
   const r = rec.result || {};
-  const pct = Math.round((r.probability || 0) * 100);
-  const riskCat = (r.risk_category || 'rendah').toLowerCase();
+  const predictedLabel = rec.predicted_label ?? r.predicted_label ?? 0;
+  const expPct = rec.experimental_score_percent ?? r.experimental_score_percent;
+  const pct = expPct != null ? Math.round(expPct) : (predictedLabel === 1 ? 85 : 15);
+  const probDisplay = expPct != null ? `${Math.round(expPct)}%` : `Label ${predictedLabel}`;
+  const probSubLabel = expPct != null ? 'Skor Eksperimental Risiko Diabetes' : `Klasifikasi Model (${rec.model_name || 'Qwen3-4B LoRA'})`;
+  const riskCat = (r.risk_category || (predictedLabel === 1 ? 'tinggi' : 'rendah')).toLowerCase();
 
   // 1. Calculate Age and Birth Date display
   let birthDateFormatted = '-';
-  let userAge = '-';
+  let userAge = ans.age_years != null ? ans.age_years : '-';
   if (birthDateRaw) {
     try {
       const bDate = new Date(birthDateRaw);
       birthDateFormatted = bDate.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
-      const examDate = new Date(rec.created_at);
-      const ageDiff = Math.floor((examDate - bDate) / (365.25 * 864e5));
-      userAge = isNaN(ageDiff) ? '-' : ageDiff;
+      if (userAge === '-') {
+        const examDate = new Date(rec.created_at);
+        const ageDiff = Math.floor((examDate - bDate) / (365.25 * 864e5));
+        userAge = isNaN(ageDiff) ? '-' : ageDiff;
+      }
     } catch (e) {
       birthDateFormatted = String(birthDateRaw);
     }
   }
 
   // 2. Antropometry formatting
-  const bmiVal = ans.BMI != null ? Number(ans.BMI).toFixed(1) : '-';
-  let heightStr = ans.height ? ans.height : '-';
-  let weightStr = ans.weight ? ans.weight : '-';
+  const rawBmi = rec.bmi ?? ans.BMI;
+  const bmiVal = rawBmi != null ? Number(rawBmi).toFixed(1) : '-';
+  let heightStr = ans.height_cm ?? ans.height ?? '-';
+  let weightStr = ans.weight_kg ?? ans.weight ?? '-';
 
-  // If height and weight are missing in older record, attempt reverse calculation or sensible placeholder
   if (heightStr === '-' && bmiVal !== '-') {
     heightStr = '170 (Estimasi)';
     weightStr = (Number(bmiVal) * ((1.7) ** 2)).toFixed(1) + ' (Estimasi)';
@@ -99,18 +119,21 @@ guard();
   }
 
   // 3. Mapping answers
-  const sexLabel = ans.Sex === 1 || ans.Sex === '1' ? 'Laki-laki' : 'Perempuan';
+  const sexRaw = ans.sex_uci ?? ans.Sex;
+  const sexLabel = sexRaw === 1 || sexRaw === '1' ? 'Laki-laki' : 'Perempuan';
   const highBp = ans.HighBP === 1 || ans.HighBP === '1';
   const highChol = ans.HighChol === 1 || ans.HighChol === '1';
   const cholCheck = ans.CholCheck === 1 || ans.CholCheck === '1';
   const stroke = ans.Stroke === 1 || ans.Stroke === '1';
   const heartDisease = ans.HeartDiseaseorAttack === 1 || ans.HeartDiseaseorAttack === '1';
+  const familyHistory = ans.family_history === 1 || ans.family_history === '1';
   const smoker = ans.Smoker === 1 || ans.Smoker === '1';
   const physActivity = ans.PhysActivity === 1 || ans.PhysActivity === '1';
   const fruits = ans.Fruits === 1 || ans.Fruits === '1';
   const veggies = ans.Veggies === 1 || ans.Veggies === '1';
   const alcohol = ans.HvyAlcoholConsump === 1 || ans.HvyAlcoholConsump === '1';
   const diffWalk = ans.DiffWalk === 1 || ans.DiffWalk === '1';
+  const sugaryDays = ans.sugary_days_per_week != null ? `${ans.sugary_days_per_week} hari/minggu` : '-';
 
   const GENHLTH_MAP = {
     '1': 'Sangat Baik',
@@ -123,12 +146,12 @@ guard();
 
   // 4. Clinical interpretation text
   let riskDescription = '';
-  if (riskCat === 'rendah') {
-    riskDescription = 'Estimasi probabilitas model menunjukkan tingkat risiko diabetes melitus berada pada tingkat RENDAH. Profil antropometri dan gaya hidup Anda secara umum menunjukkan status metabolisme yang terkontrol baik. Pertahankan pola makan bergizi seimbang, rutinitas aktivitas fisik harian, dan pantau kesehatan secara teratur.';
+  if (predictedLabel === 0 && riskCat === 'rendah') {
+    riskDescription = `Hasil klasifikasi model (${esc(r.meaning || 'Label 0: Tidak diabetes pada label data survei')}) menunjukkan tingkat indikasi risiko berada pada kategori RENDAH. Profil antropometri dan gaya hidup Anda secara umum menunjukkan status metabolisme yang terkontrol baik. Pertahankan pola makan bergizi seimbang, rutinitas aktivitas fisik harian, dan pantau kesehatan secara teratur.`;
   } else if (riskCat === 'sedang') {
-    riskDescription = 'Estimasi probabilitas model menunjukkan tingkat risiko diabetes melitus berada pada kategori SEDANG (MODERATE RISK). Terdapat beberapa indikator klinis atau pola hidup yang berkontribusi terhadap potensi resistensi insulin. Diperlukan evaluasi gaya hidup aktif serta pemeriksaan glukosa darah berkala.';
+    riskDescription = 'Hasil evaluasi menunjukkan tingkat risiko berada pada kategori SEDANG. Terdapat beberapa indikator klinis atau pola hidup yang berkontribusi terhadap potensi resistensi insulin. Diperlukan evaluasi gaya hidup aktif serta pemeriksaan glukosa darah berkala.';
   } else {
-    riskDescription = 'Estimasi probabilitas model menunjukkan tingkat risiko diabetes melitus berada pada kategori TINGGI (HIGH RISK). Terdapat akumulasi faktor risiko dominan yang secara klinis berhubungan kuat dengan gangguan homeostasis glukosa. Pasien sangat disarankan melakukan pemeriksaan klinis langsung ke dokter.';
+    riskDescription = `Hasil klasifikasi model (${esc(r.meaning || 'Label 1: Prediabetes/diabetes pada label data survei')}) menunjukkan TERINDIKASI BERISIKO. Terdapat akumulasi faktor risiko yang secara statistik berhubungan dengan gangguan homeostasis glukosa pada dataset survei CDC BRFSS. Pasien sangat disarankan melakukan pemeriksaan klinis langsung ke dokter.`;
   }
 
   // 5. Factors descriptions with detailed pathophysiology
@@ -168,12 +191,16 @@ guard();
     Stroke: {
       name: 'Riwayat Serangan Stroke / Serebrovaskular',
       patho: 'Insiden stroke menunjukkan adanya kerusakan makrovaskular yang meningkatkan kerentanan vaskular terhadap fluktuasi kadar glukosa darah.'
+    },
+    Smoker: {
+      name: 'Riwayat Merokok (≥100 Batang)',
+      patho: 'Paparan nikotin dan radikal bebas rokok memicu stres oksidatif sistemik yang menghambat pensinyalan reseptor insulin.'
     }
   };
 
   const topFactorsList = r.top_factors && r.top_factors.length ? r.top_factors : ['BMI', 'PhysActivity'];
   const topFactorsRows = topFactorsList.map((fKey, i) => {
-    const fObj = factorPatho[fKey] || { name: API.LABEL[fKey] || fKey, patho: 'Parameter ini memberikan kontribusi bobot statistik terhadap kenaikan skor estimasi risiko diabetes.' };
+    const fObj = factorPatho[fKey] || { name: LABEL[fKey] || fKey, patho: 'Parameter ini memberikan kontribusi bobot statistik terhadap kenaikan skor estimasi risiko diabetes.' };
     let patientCondition = '-';
     if (fKey === 'BMI') patientCondition = `${bmiVal} kg/m² (${bmiCategoryText})`;
     else if (fKey === 'HighBP') patientCondition = highBp ? 'Positif Hipertensi' : 'Tidak';
@@ -191,6 +218,31 @@ guard();
       </tr>
     `;
   }).join('');
+
+  // Render recommendations from backend if available, otherwise default plan cards
+  const recs = rec.recommendations && rec.recommendations.length ? rec.recommendations : null;
+  const planCardsHtml = recs
+    ? recs.map((item, idx) => `
+        <div class="plan-card">
+          <div class="plan-card-head">🩺 ${idx + 1}. ${esc(item.title)}</div>
+          <p>${esc(item.description)}</p>
+          ${item.reason_from_questionnaire ? `<p class="note" style="margin-top:0.35rem;font-size:0.75rem"><i>Dasar: ${esc(item.reason_from_questionnaire)}</i></p>` : ''}
+        </div>
+      `).join('')
+    : `
+      <div class="plan-card">
+        <div class="plan-card-head">🥗 1. Intervensi Pola Makan & Gizi</div>
+        <p>Batasi konsumsi karbohidrat sederhana, tepung, dan gula olahan. Perbanyak sayuran hijau berserat tinggi serta makanan dengan indeks glikemik rendah (Low GI) untuk mencegah lonjakan glukosa darah post-prandial.</p>
+      </div>
+      <div class="plan-card">
+        <div class="plan-card-head">🏃 2. Program Aktivitas Fisik</div>
+        <p>Jadwalkan aktivitas aerobik intensitas sedang minimal 150 menit per minggu (30 menit, 5x seminggu), seperti jalan cepat atau berenang guna meningkatkan sensitivitas reseptor insulin di jaringan otot.</p>
+      </div>
+      <div class="plan-card">
+        <div class="plan-card-head">🩺 3. Rujukan Uji Laboratorium</div>
+        <p>Sangat dianjurkan melakukan tes darah definitif di laboratorium: <b>Glukosa Darah Puasa (GDP)</b>, <b>Glukosa Darah 2 Jam PP</b>, dan <b>Hemoglobin A1c (HbA1c)</b> guna memastikan diagnosis normoglikemia atau pradiabetes.</p>
+      </div>
+    `;
 
   // 6. Build HTML output
   container.innerHTML = `
@@ -236,11 +288,11 @@ guard();
 
         <!-- Metadata Grid Box -->
         <div class="doc-meta-box">
-          <div class="meta-item"><span class="meta-label">No. Rekam Skrining (RM):</span><b class="meta-val">DW-2026-${rec.id}</b></div>
+          <div class="meta-item"><span class="meta-label">No. Rekam Skrining (RM):</span><b class="meta-val">DW-2026-${esc(rec.id)}</b></div>
           <div class="meta-item"><span class="meta-label">Waktu Pemeriksaan:</span><b class="meta-val">${fmtDate(rec.created_at)}</b></div>
           <div class="meta-item"><span class="meta-label">Nama Lengkap Pasien:</span><b class="meta-val">${esc(userName)}</b></div>
           <div class="meta-item"><span class="meta-label">Alamat Email Terdaftar:</span><b class="meta-val">${esc(userEmail)}</b></div>
-          <div class="meta-item"><span class="meta-label">Tanggal Lahir / Usia:</span><b class="meta-val">${birthDateFormatted} (${userAge} Tahun)</b></div>
+          <div class="meta-item"><span class="meta-label">Tanggal Lahir / Usia:</span><b class="meta-val">${esc(birthDateFormatted)} (${esc(userAge)} Tahun)</b></div>
           <div class="meta-item"><span class="meta-label">Jenis Kelamin Biologis:</span><b class="meta-val">${sexLabel}</b></div>
         </div>
 
@@ -259,19 +311,19 @@ guard();
             <tr>
               <td style="text-align:center">1</td>
               <td>Tinggi Badan (Statur)</td>
-              <td><b>${heightStr} cm</b></td>
+              <td><b>${esc(heightStr)} cm</b></td>
               <td>Tinggi badan aktual dalam posisi tegak</td>
             </tr>
             <tr>
               <td style="text-align:center">2</td>
               <td>Berat Badan</td>
-              <td><b>${weightStr} kg</b></td>
+              <td><b>${esc(weightStr)} kg</b></td>
               <td>Massa tubuh aktual saat pengisian skrining</td>
             </tr>
             <tr>
               <td style="text-align:center">3</td>
               <td>Indeks Massa Tubuh (BMI)</td>
-              <td><span class="bmi-pill ${bmiClass}">${bmiVal} kg/m²</span></td>
+              <td><span class="bmi-pill ${bmiClass}">${esc(bmiVal)} kg/m²</span></td>
               <td><b>${bmiCategoryText}</b> (Rentang normal: 18.5 – 24.9 kg/m²)</td>
             </tr>
           </tbody>
@@ -319,6 +371,12 @@ guard();
               <td><span class="status-tag ${heartDisease ? 'tag-warn' : 'tag-ok'}">${heartDisease ? 'Pernah Mengalami' : 'Tidak Pernah'}</span></td>
               <td>Penyakit kardiovaskular memiliki korelasi kuat dengan intoleransi glukosa</td>
             </tr>
+            <tr>
+              <td style="text-align:center">6</td>
+              <td>Riwayat Keluarga Diabetes</td>
+              <td><span class="status-tag ${familyHistory ? 'tag-warn' : 'tag-ok'}">${familyHistory ? 'Ada Riwayat Keluarga' : 'Tidak Ada'}</span></td>
+              <td>Faktor genetik meningkatkan kerentanan terhadap resistensi insulin</td>
+            </tr>
           </tbody>
         </table>
 
@@ -354,9 +412,9 @@ guard();
             </tr>
             <tr>
               <td style="text-align:center">4</td>
-              <td>Konsumsi Alkohol Berlebih</td>
-              <td><span class="status-tag ${alcohol ? 'tag-warn' : 'tag-ok'}">${alcohol ? 'Ya (Konsumsi Tinggi)' : 'Tidak / Dalam Batas Aman'}</span></td>
-              <td>Konsumsi berlebih merusak hepar dan menurunkan efektivitas insulin</td>
+              <td>Konsumsi Alkohol & Minuman Manis</td>
+              <td><span class="status-tag ${alcohol ? 'tag-warn' : 'tag-ok'}">Alkohol: ${alcohol ? 'Tinggi' : 'Aman'} | Manis: ${esc(sugaryDays)}</span></td>
+              <td>Gula tambahan dan alkohol berlebih memperberat kerja metabolisme hepar</td>
             </tr>
             <tr>
               <td style="text-align:center">5</td>
@@ -384,7 +442,7 @@ guard();
       <div class="doc-page-footer">
         <div class="footer-left">
           <span>* Data demografi dan parameter fisik di atas dicatat berdasarkan masukan terpandu pasien pada sistem DiaWatch AI.</span>
-          <span>No. Berkas RM: DW-2026-${rec.id}</span>
+          <span>No. Berkas RM: DW-2026-${esc(rec.id)}</span>
         </div>
         <div class="footer-right">
           <span class="page-num">Halaman 1 dari 2</span>
@@ -402,7 +460,7 @@ guard();
             <span>Pusat Penapisan Risiko Metabolik & Skrining Dini Diabetes Melitus</span>
           </div>
           <div class="running-right">
-            <span>No. RM: <b>DW-2026-${rec.id}</b> | Pasien: <b>${esc(userName)}</b></span>
+            <span>No. RM: <b>DW-2026-${esc(rec.id)}</b> | Pasien: <b>${esc(userName)}</b></span>
           </div>
         </div>
         <div class="running-divider"></div>
@@ -418,11 +476,11 @@ guard();
         <div class="doc-assessment-box ${riskCat}">
           <div class="assessment-main">
             <div class="assessment-cat-badge ${riskCat}">
-              STATUS TINGKAT RISIKO: ${riskCat.toUpperCase()}
+              STATUS TINGKAT RISIKO: ${predictedLabel === 1 ? 'TERINDIKASI BERISIKO (LABEL 1)' : 'TIDAK TERINDIKASI / RENDAH (LABEL 0)'}
             </div>
             <div class="assessment-prob">
-              <span class="prob-num">${pct}%</span>
-              <span class="prob-label">Estimasi Probabilitas Risiko Diabetes</span>
+              <span class="prob-num">${esc(probDisplay)}</span>
+              <span class="prob-label">${esc(probSubLabel)}</span>
             </div>
           </div>
           <div class="assessment-bar">
@@ -452,18 +510,7 @@ guard();
         <!-- Bagian F: Rencana Tindak Lanjut Medis Terstruktur -->
         <div class="doc-sec-header">F. RENCANA TINDAK LANJUT & ANJURAN INTERVENSI KESEHATAN</div>
         <div class="doc-plan-grid">
-          <div class="plan-card">
-            <div class="plan-card-head">🥗 1. Intervensi Pola Makan & Gizi</div>
-            <p>Batasi konsumsi karbohidrat sederhana, tepung, dan gula olahan. Perbanyak sayuran hijau berserat tinggi serta makanan dengan indeks glikemik rendah (Low GI) untuk mencegah lonjakan glukosa darah post-prandial.</p>
-          </div>
-          <div class="plan-card">
-            <div class="plan-card-head">🏃 2. Program Aktivitas Fisik</div>
-            <p>Jadwalkan aktivitas aerobik intensitas sedang minimal 150 menit per minggu (30 menit, 5x seminggu), seperti jalan cepat atau berenang guna meningkatkan sensitivitas reseptor insulin di jaringan otot.</p>
-          </div>
-          <div class="plan-card">
-            <div class="plan-card-head">🩺 3. Rujukan Uji Laboratorium</div>
-            <p>Sangat dianjurkan melakukan tes darah definitif di laboratorium: <b>Glukosa Darah Puasa (GDP)</b>, <b>Glukosa Darah 2 Jam PP</b>, dan <b>Hemoglobin A1c (HbA1c)</b> guna memastikan diagnosis normoglikemia atau pradiabetes.</p>
-          </div>
+          ${planCardsHtml}
         </div>
 
         <!-- Bagian G: AI MEDICAL DISCLAIMER (PENAFIAN MEDIS SINGKAT) -->
@@ -474,7 +521,7 @@ guard();
           </div>
           <div class="disclaimer-body">
             <p style="font-size:0.86rem;color:#78350f;line-height:1.55">
-              Dokumen ini <strong>hanya berupa dugaan awal</strong> berbasis sistem skrining kecerdasan buatan. Anda <strong>tetap membutuhkan konsultasi dan pemeriksaan langsung ke dokter</strong> untuk mengetahui hasil pemeriksaan dan diagnosis medis yang sesungguhnya.
+              ${esc(r.disclaimer || 'Dokumen ini hanya berupa dugaan awal berbasis sistem skrining kecerdasan buatan. Anda tetap membutuhkan konsultasi dan pemeriksaan langsung ke dokter untuk mengetahui hasil pemeriksaan dan diagnosis medis yang sesungguhnya.')}
             </p>
           </div>
         </div>
@@ -484,7 +531,7 @@ guard();
       <div class="doc-page-footer">
         <div class="footer-left">
           <span>* Berkas ini diterbitkan secara sah oleh sistem elektronik DiaWatch AI untuk keperluan edukasi dan penapisan mandiri.</span>
-          <span>Dokumen Rahasia Medis Pasien Terlindungi | No. Berkas RM: DW-2026-${rec.id}</span>
+          <span>Dokumen Rahasia Medis Pasien Terlindungi | No. Berkas RM: DW-2026-${esc(rec.id)}</span>
         </div>
         <div class="footer-right">
           <span class="page-num">Halaman 2 dari 2</span>

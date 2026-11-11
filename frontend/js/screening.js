@@ -1,6 +1,9 @@
 /**
  * DiaWatch AI - Multi-Step Screening Wizard Controller
+ * Terintegrasi dengan POST /api/predict (submitScreening) pada FastAPI Backend.
  */
+import { submitScreening, normalizeHistoryItem } from "./api.js";
+
 // Protect route: user must be logged in
 guard();
 
@@ -14,9 +17,10 @@ const STEPS = [
     title: 'Data Tubuh & Pengukuran Fisik',
     sub: 'Informasi dasar antropometri untuk menghitung Indeks Massa Tubuh (BMI) dan kategori usia klinis Anda.',
     f: [
-      sel('Sex', 'Jenis Kelamin Biologis', [['0', 'Perempuan'], ['1', 'Laki-laki']], 'Digunakan untuk kalkulasi faktor metabolik.'),
-      { name: 'height', text: 'Tinggi Badan', t: 'num', min: 100, max: 230, unit: 'cm', placeholder: 'Contoh: 170' },
-      { name: 'weight', text: 'Berat Badan', t: 'num', min: 30, max: 250, unit: 'kg', placeholder: 'Contoh: 68' }
+      sel('sex_uci', 'Jenis Kelamin Biologis', [['0', 'Perempuan'], ['1', 'Laki-laki']], 'Digunakan untuk kalkulasi faktor metabolik.'),
+      { name: 'age_years', text: 'Usia Saat Ini', t: 'num', min: 18, max: 100, unit: 'tahun', placeholder: 'Contoh: 25' },
+      { name: 'height_cm', text: 'Tinggi Badan', t: 'num', min: 100, max: 220, unit: 'cm', placeholder: 'Contoh: 170' },
+      { name: 'weight_kg', text: 'Berat Badan', t: 'num', min: 25, max: 300, unit: 'kg', placeholder: 'Contoh: 68' }
     ]
   },
   {
@@ -27,7 +31,8 @@ const STEPS = [
       q('HighChol', 'Pernah didiagnosis kadar kolesterol darah tinggi (hiperkolesterolemia)?'),
       q('CholCheck', 'Pernah melakukan cek kadar kolesterol dalam 5 tahun terakhir?'),
       q('Stroke', 'Pernah mengalami serangan stroke atau gangguan pembuluh darah otak?'),
-      q('HeartDiseaseorAttack', 'Pernah didiagnosis penyakit jantung koroner atau serangan jantung?')
+      q('HeartDiseaseorAttack', 'Pernah didiagnosis penyakit jantung koroner atau serangan jantung?'),
+      q('family_history', 'Memiliki keluarga dekat (orang tua / saudara kandung) dengan riwayat diabetes?', 'Digunakan untuk rekomendasi edukasi pencegahan.')
     ]
   },
   {
@@ -38,7 +43,8 @@ const STEPS = [
       q('PhysActivity', 'Melakukan olahraga atau aktivitas fisik dalam 30 hari terakhir?', 'Di luar aktivitas pekerjaan harian rutin (misal jalan santai, senam, dll).'),
       q('Fruits', 'Mengonsumsi buah minimal satu kali setiap hari?'),
       q('Veggies', 'Mengonsumsi sayuran hijau atau sayur mayur setiap hari?'),
-      q('HvyAlcoholConsump', 'Mengonsumsi alkohol dalam jumlah berlebih?', 'Lebih dari 14 gelas per minggu (pria) atau 7 gelas (wanita).')
+      q('HvyAlcoholConsump', 'Mengonsumsi alkohol dalam jumlah berlebih?', 'Lebih dari 14 gelas per minggu (pria) atau 7 gelas (wanita).'),
+      { name: 'sugary_days_per_week', text: 'Frekuensi konsumsi minuman atau makanan manis tambahan dalam seminggu', hint: 'Masukkan jumlah hari per minggu (0 hingga 7 hari)', t: 'num', min: 0, max: 7, unit: 'hari/minggu', placeholder: '0 - 7' }
     ]
   },
   {
@@ -55,6 +61,15 @@ const STEPS = [
 
 let cur = 0;
 const ans = {};
+
+// Pre-fill age_years from session birth_date if available
+const currentSession = getSession();
+if (currentSession?.user?.birth_date) {
+  const computedAge = Math.floor((new Date() - new Date(currentSession.user.birth_date)) / (365.25 * 864e5));
+  if (!isNaN(computedAge) && computedAge >= 18 && computedAge <= 100) {
+    ans.age_years = String(computedAge);
+  }
+}
 
 function fieldHtml(f, idx) {
   const hintText = f.hint ? `<span class="hint">${f.hint}</span>` : '';
@@ -113,7 +128,7 @@ function fieldHtml(f, idx) {
         </div>
       </div>
       <div class="input-with-unit" style="margin-top:0.4rem">
-        <input id="${f.name}" name="${f.name}" type="number" min="${f.min}" max="${f.max}" placeholder="${f.placeholder || ''}" inputmode="numeric" value="${ans[f.name] ?? ''}">
+        <input id="${f.name}" name="${f.name}" type="number" min="${f.min}" max="${f.max}" step="any" placeholder="${f.placeholder || ''}" inputmode="numeric" value="${ans[f.name] ?? ''}">
         ${f.unit ? `<span class="input-unit-label">${f.unit}</span>` : ''}
       </div>
     </div>
@@ -145,10 +160,10 @@ function updateLiveBmi() {
     return;
   }
 
-  const h = +ans.height || +($('#height') ? $('#height').value : 0);
-  const w = +ans.weight || +($('#weight') ? $('#weight').value : 0);
+  const h = +ans.height_cm || +($('#height_cm') ? $('#height_cm').value : 0);
+  const w = +ans.weight_kg || +($('#weight_kg') ? $('#weight_kg').value : 0);
 
-  if (h >= 100 && h <= 230 && w >= 30 && w <= 250) {
+  if (h >= 100 && h <= 220 && w >= 25 && w <= 300) {
     const bmi = +(w / ((h / 100) ** 2)).toFixed(1);
     let statusText = 'Berat Badan Normal / Ideal';
     let statusClass = 'rendah';
@@ -180,16 +195,20 @@ function draw() {
 
   let fieldsHtml = '';
   if (cur === 0) {
-    // Step 0: Sex + 2-col Height & Weight
+    // Step 0: Sex + Age + 2-col Height & Weight
     const sexField = s.f[0];
-    const heightField = s.f[1];
-    const weightField = s.f[2];
+    const ageField = s.f[1];
+    const heightField = s.f[2];
+    const weightField = s.f[3];
 
     fieldsHtml = `
-      ${fieldHtml(sexField, 0)}
       <div class="form-grid-2col">
-        ${fieldHtml(heightField, 1)}
-        ${fieldHtml(weightField, 2)}
+        ${fieldHtml(sexField, 0)}
+        ${fieldHtml(ageField, 1)}
+      </div>
+      <div class="form-grid-2col">
+        ${fieldHtml(heightField, 2)}
+        ${fieldHtml(weightField, 3)}
       </div>
     `;
   } else {
@@ -210,11 +229,11 @@ function draw() {
 
   // Attach live listener for BMI inputs in Step 0
   if (cur === 0) {
-    const hInput = $('#height');
-    const wInput = $('#weight');
+    const hInput = $('#height_cm');
+    const wInput = $('#weight_kg');
     if (hInput && wInput) {
-      hInput.oninput = () => { ans.height = hInput.value; updateLiveBmi(); };
-      wInput.oninput = () => { ans.weight = wInput.value; updateLiveBmi(); };
+      hInput.oninput = () => { ans.height_cm = hInput.value; updateLiveBmi(); };
+      wInput.oninput = () => { ans.weight_kg = wInput.value; updateLiveBmi(); };
       updateLiveBmi();
     }
   } else {
@@ -273,43 +292,39 @@ $('#next').onclick = async () => {
     return;
   }
 
-  // Final Step: Submit payload
-  const body = {};
-  Object.entries(ans).forEach(([k, v]) => {
-    if (k !== 'height' && k !== 'weight') {
-      body[k] = +v;
-    }
-  });
-
-  const h = +ans.height;
-  const w = +ans.weight;
-  body.BMI = +(w / ((h / 100) ** 2)).toFixed(1);
-
-  const session = getSession();
-  const birthDate = session && session.user ? session.user.birth_date : '1995-01-01';
-  body.Age = ageCategory(birthDate);
-
-  // Nilai default kompatibilitas skema model machine learning (BRFSS 21 features)
-  if (body.Education === undefined) body.Education = 4;
-  if (body.AnyHealthcare === undefined) body.AnyHealthcare = 1;
-  if (body.NoDocbcCost === undefined) body.NoDocbcCost = 0;
-  if (body.Income === undefined) body.Income = 5;
-
-  const fullAnswers = { ...body, height: h, weight: w };
+  // Final Step: Submit payload sesuai kontrak ScreeningForm di backend/questionnaire.py
+  const payload = {
+    age_years: Math.round(Number(ans.age_years)),
+    sex_uci: Number(ans.sex_uci),
+    height_cm: Number(ans.height_cm),
+    weight_kg: Number(ans.weight_kg),
+    HighBP: Number(ans.HighBP),
+    HighChol: Number(ans.HighChol),
+    CholCheck: Number(ans.CholCheck),
+    Stroke: Number(ans.Stroke),
+    HeartDiseaseorAttack: Number(ans.HeartDiseaseorAttack),
+    Smoker: Number(ans.Smoker),
+    PhysActivity: Number(ans.PhysActivity),
+    Fruits: Number(ans.Fruits),
+    Veggies: Number(ans.Veggies),
+    HvyAlcoholConsump: Number(ans.HvyAlcoholConsump),
+    GenHlth: Number(ans.GenHlth),
+    MentHlth: Math.round(Number(ans.MentHlth)),
+    PhysHlth: Math.round(Number(ans.PhysHlth)),
+    DiffWalk: Number(ans.DiffWalk),
+    sugary_days_per_week: Math.round(Number(ans.sugary_days_per_week)),
+    family_history: Number(ans.family_history),
+  };
 
   const nextBtn = $('#next');
   nextBtn.disabled = true;
   $('#next-text').textContent = 'Memproses Analisis Kecerdasan Buatan...';
 
   try {
-    const result = await API.predict(body, { height: h, weight: w });
-    sessionStorage.setItem('dw_last', JSON.stringify({
-      id: result.id,
-      created_at: result.created_at,
-      answers: fullAnswers,
-      result: result
-    }));
-    location.href = 'report.html';
+    const response = await submitScreening(payload);
+    const normalized = normalizeHistoryItem(response, payload);
+    sessionStorage.setItem('dw_last', JSON.stringify(normalized));
+    location.href = `report.html?id=${encodeURIComponent(normalized.id)}`;
   } catch (err) {
     errText.textContent = err.message || 'Gagal memproses analisis skrining.';
     errBox.classList.remove('hide');

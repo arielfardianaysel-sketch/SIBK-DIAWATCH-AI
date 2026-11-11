@@ -1,12 +1,36 @@
 /**
  * DiaWatch AI - Common Utilities, State & Navigation Logic
  */
-const CFG = window.APP_CONFIG || { USE_MOCK: true, API_URL: 'http://localhost:8000' };
+const CFG = window.APP_CONFIG || { USE_MOCK: false, API_URL: 'http://127.0.0.1:8000' };
 
-// Session management
+// Session management (terintegrasi dengan sesi Supabase Auth)
 const getSession = () => {
   try {
-    return JSON.parse(localStorage.getItem('dw_session') || 'null');
+    const saved = JSON.parse(localStorage.getItem('dw_session') || 'null');
+    if (saved && saved.user) return saved;
+
+    // Fallback: sinkronisasi otomatis bila sudah login di Supabase Auth
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith('sb-') && k.endsWith('-auth-token')) {
+        const sbSession = JSON.parse(localStorage.getItem(k) || 'null');
+        if (sbSession && sbSession.access_token && sbSession.user) {
+          const u = sbSession.user;
+          const synced = {
+            token: sbSession.access_token,
+            user: {
+              id: u.id,
+              name: u.user_metadata?.display_name || u.email?.split('@')[0] || 'Pengguna',
+              email: u.email || '',
+              birth_date: u.user_metadata?.birth_date || null,
+            },
+          };
+          localStorage.setItem('dw_session', JSON.stringify(synced));
+          return synced;
+        }
+      }
+    }
+    return null;
   } catch (e) {
     return null;
   }
@@ -138,9 +162,22 @@ function renderNav() {
   // Attach logout handler
   const logoutBtn = $('#btn-logout');
   if (logoutBtn) {
-    logoutBtn.onclick = (e) => {
+    logoutBtn.onclick = async (e) => {
       e.preventDefault();
       if (confirm('Apakah Anda yakin ingin keluar dari akun?')) {
+        try {
+          if (window.API && typeof window.API.logout === 'function') {
+            await window.API.logout();
+          }
+        } catch (_) {
+          // Tetap lanjutkan hapus sesi lokal bila request signOut gagal
+        }
+        for (let i = localStorage.length - 1; i >= 0; i--) {
+          const k = localStorage.key(i);
+          if (k && k.startsWith('sb-') && k.endsWith('-auth-token')) {
+            localStorage.removeItem(k);
+          }
+        }
         setSession(null);
         location.href = 'index.html';
       }
