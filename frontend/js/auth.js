@@ -1,6 +1,8 @@
 /**
- * DiaWatch AI - Authentication Controller (Login & Register)
+ * DiaWatch AI - Authentication Controller (Login & Register via Supabase Auth)
  */
+import { API, registerUser, loginUser, getMyProfile } from "./api.js";
+
 // If already logged in, redirect to index
 guestOnly();
 
@@ -17,6 +19,7 @@ const tabReg = $('#tab-reg');
 const errBox = $('#err');
 const errText = $('#err-text');
 const noticeBox = $('#auth-notice');
+const noticeText = $('#auth-notice-text');
 
 // Show notice if redirected from protected route
 if (msgType === 'need_login' && noticeBox) {
@@ -30,6 +33,16 @@ function showError(msg) {
     errBox.classList.toggle('hide', !msg);
     if (msg) {
       errBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  }
+}
+
+function showNotice(msg) {
+  if (noticeText) noticeText.textContent = msg || '';
+  if (noticeBox) {
+    noticeBox.classList.toggle('hide', !msg);
+    if (msg) {
+      noticeBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
   }
 }
@@ -89,6 +102,16 @@ function attachSubmit(form, apiFn) {
     try {
       const data = Object.fromEntries(new FormData(form));
       const res = await apiFn(data);
+
+      // Bila registrasi memerlukan verifikasi email sebelum sesi aktif
+      if (!res.token) {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+        switchTab(false);
+        showNotice('Registrasi berhasil! Silakan periksa kotak masuk email Anda untuk verifikasi sebelum masuk.');
+        return;
+      }
+
       setSession(res);
 
       // Determine redirect target
@@ -120,7 +143,17 @@ attachSubmit(fReg, async (data) => {
   if (isNaN(birthDate.getTime()) || birthDate > new Date()) {
     throw new Error('Tanggal lahir tidak valid atau berada di masa depan.');
   }
-  return API.register(data);
+  const result = await registerUser(data.email, data.password, data.name.trim(), data.birth_date);
+  const user = result.user;
+  return {
+    token: result.session?.access_token || null,
+    user: {
+      id: user?.id,
+      name: data.name.trim(),
+      email: user?.email || data.email,
+      birth_date: data.birth_date,
+    },
+  };
 });
 
 // Handle Login submit
@@ -128,7 +161,26 @@ attachSubmit(fLogin, async (data) => {
   if (!data.email || !data.password) {
     throw new Error('Silakan isi email dan kata sandi Anda.');
   }
-  return API.login(data);
+  const result = await loginUser(data.email, data.password);
+  const user = result.user;
+  let displayName = user?.user_metadata?.display_name;
+  if (!displayName) {
+    try {
+      const profile = await getMyProfile();
+      if (profile?.display_name) displayName = profile.display_name;
+    } catch (_) {
+      // Abaikan bila profil belum tersedia
+    }
+  }
+  return {
+    token: result.session?.access_token,
+    user: {
+      id: user?.id,
+      name: displayName || user?.email?.split('@')[0] || 'Pengguna',
+      email: user?.email || data.email,
+      birth_date: user?.user_metadata?.birth_date || null,
+    },
+  };
 });
 
 // Auto-switch mode based on URL parameter

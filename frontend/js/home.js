@@ -1,6 +1,8 @@
 /**
  * DiaWatch AI - Home / Dashboard Controller
  */
+import { getHistory, getHistoryDetail, normalizeHistoryItem, LABEL } from "./api.js";
+
 document.addEventListener('DOMContentLoaded', async () => {
   const session = getSession();
   const guestLanding = $('#guest-landing');
@@ -25,10 +27,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     const greetEl = $('#dash-greeting');
     if (greetEl) greetEl.textContent = greet;
 
-    // Load recent screening data
+    // Load recent screening data from FastAPI / Supabase
     try {
-      const history = await API.history();
-      renderDashboardStats(history);
+      const rawHistory = await getHistory();
+      let normalizedList = (rawHistory || []).map((item) => normalizeHistoryItem(item));
+      if (normalizedList.length > 0 && normalizedList[0].id) {
+        try {
+          const latestDetail = await getHistoryDetail(normalizedList[0].id);
+          normalizedList[0] = normalizeHistoryItem(latestDetail);
+        } catch (_) {
+          // Gunakan ringkasan item bila detail gagal dimuat
+        }
+      }
+      renderDashboardStats(normalizedList);
     } catch (e) {
       console.warn('Gagal memuat riwayat dashboard:', e);
       renderDashboardStats([]);
@@ -51,40 +62,57 @@ function renderDashboardStats(history) {
   if (history && history.length > 0) {
     const latest = history[0];
     const r = latest.result;
-    const ans = latest.answers;
+    const bmi = latest.bmi ?? latest.answers?.BMI;
+    const statusText = latest.predicted_label === 1 ? 'Berisiko (Label 1)' : 'Rendah (Label 0)';
+    const scoreDisplay =
+      latest.experimental_score_percent != null
+        ? `${Math.round(latest.experimental_score_percent)}%`
+        : '';
 
     if (lastRiskEl) {
       lastRiskEl.innerHTML = `
-        <span class="pill ${esc(r.risk_category)}">${esc(r.risk_category)}</span>
-        <span style="font-size:1.1rem;font-weight:700;margin-left:0.3rem">${Math.round(r.probability * 100)}%</span>
+        <span class="pill ${esc(r.risk_category)}">${esc(statusText)}</span>
+        ${scoreDisplay ? `<span style="font-size:1.1rem;font-weight:700;margin-left:0.3rem">${esc(scoreDisplay)}</span>` : ''}
       `;
     }
 
     if (lastBmiEl) {
-      const bmi = ans.BMI;
-      let bmiStatus = 'Normal';
-      if (bmi < 18.5) bmiStatus = 'Kurang';
-      else if (bmi >= 25 && bmi < 30) bmiStatus = 'Kelebihan';
-      else if (bmi >= 30) bmiStatus = 'Obesitas';
-      lastBmiEl.innerHTML = `${bmi} <span style="font-size:0.85rem;color:var(--muted);font-weight:500">(${bmiStatus})</span>`;
+      if (bmi != null) {
+        let bmiStatus = 'Normal';
+        if (bmi < 18.5) bmiStatus = 'Kurang';
+        else if (bmi >= 25 && bmi < 30) bmiStatus = 'Kelebihan';
+        else if (bmi >= 30) bmiStatus = 'Obesitas';
+        lastBmiEl.innerHTML = `${bmi} <span style="font-size:0.85rem;color:var(--muted);font-weight:500">(${bmiStatus})</span>`;
+      } else {
+        lastBmiEl.innerHTML = `<span style="font-size:1rem;color:var(--muted);font-weight:500">-</span>`;
+      }
     }
 
     if (recentBoxEl) {
       const topFactorsText = r.top_factors && r.top_factors.length
-        ? r.top_factors.map(k => API.LABEL[k] || k).join(', ')
-        : 'Tidak ada faktor risiko tinggi yang menonjol';
+        ? r.top_factors.map(k => LABEL[k] || k).join(', ')
+        : (latest.recommendations && latest.recommendations.length
+            ? latest.recommendations.map(rec => rec.title).join(', ')
+            : 'Tidak ada faktor risiko tinggi yang menonjol');
+
+      const barWidth =
+        latest.experimental_score_percent != null
+          ? Math.round(latest.experimental_score_percent)
+          : latest.predicted_label === 1
+          ? 85
+          : 20;
 
       recentBoxEl.innerHTML = `
         <div class="card" style="margin-bottom:0">
           <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:0.75rem;margin-bottom:1rem">
             <div>
               <span class="note">Skrining Terakhir: <b>${fmtDate(latest.created_at)}</b></span>
-              <h3 style="margin-top:0.25rem">Hasil: Risiko ${esc(r.risk_category)} (${Math.round(r.probability * 100)}%)</h3>
+              <h3 style="margin-top:0.25rem">Hasil: ${esc(r.meaning || statusText)}</h3>
             </div>
             <a href="report.html?id=${encodeURIComponent(latest.id)}" class="btn btn-sm">Lihat Laporan Lengkap</a>
           </div>
-          <p class="note" style="margin-bottom:0.75rem">Faktor utama: <b>${esc(topFactorsText)}</b></p>
-          <div class="bar" style="margin-bottom:0.5rem"><i class="${esc(r.risk_category)}" style="width:${Math.round(r.probability * 100)}%"></i></div>
+          <p class="note" style="margin-bottom:0.75rem">Catatan / Faktor Utama: <b>${esc(topFactorsText)}</b></p>
+          <div class="bar" style="margin-bottom:0.5rem"><i class="${esc(r.risk_category)}" style="width:${barWidth}%"></i></div>
         </div>
       `;
     }
@@ -106,4 +134,3 @@ function renderDashboardStats(history) {
     }
   }
 }
-
