@@ -1651,9 +1651,114 @@ input:focus, select:focus {
   gap: 0.6rem;
 }
 
-.hide {
+.hide, [hidden] {
   display: none !important;
 }
+
+/* Pills / Status Badges (mendukung low/mid/high dan rendah/sedang/tinggi) */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.25rem 0.75rem;
+  border-radius: var(--r-full);
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  border: 1px solid var(--line);
+  background: var(--line-light);
+  color: var(--ink-secondary);
+  text-transform: capitalize;
+}
+
+.pill.low, .pill.rendah {
+  background: var(--low-bg);
+  color: var(--low);
+  border-color: var(--low-border);
+}
+
+.pill.mid, .pill.sedang {
+  background: var(--mid-bg);
+  color: var(--mid);
+  border-color: var(--mid-border);
+}
+
+.pill.high, .pill.tinggi {
+  background: var(--high-bg);
+  color: var(--high);
+  border-color: var(--high-border);
+}
+
+/* History List & Empty State */
+.history-item {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  padding: 1.35rem 1.5rem;
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.25rem;
+  transition: border-color 0.15s ease;
+}
+
+.history-item:hover {
+  border-color: var(--pri-border);
+}
+
+.history-date {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--muted);
+  display: block;
+}
+
+.history-meta {
+  font-size: 0.88rem;
+  color: var(--ink-secondary);
+}
+
+.empty-state {
+  text-align: center;
+  padding: 3.5rem 1.5rem;
+}
+
+.empty-state-icon {
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 1rem;
+  border-radius: 50%;
+  background: var(--pri-tint);
+  color: var(--pri);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.empty-state-icon svg {
+  width: 28px;
+  height: 28px;
+}
+
+/* Progress Bar (Dashboard) */
+.bar {
+  height: 8px;
+  background: var(--line);
+  border-radius: var(--r-full);
+  overflow: hidden;
+}
+
+.bar i {
+  display: block;
+  height: 100%;
+  border-radius: var(--r-full);
+  background: var(--pri);
+}
+
+.bar i.low, .bar i.rendah { background: var(--low); }
+.bar i.mid, .bar i.sedang { background: var(--mid); }
+.bar i.high, .bar i.tinggi { background: var(--high); }
 
 /* Footer */
 .footer {

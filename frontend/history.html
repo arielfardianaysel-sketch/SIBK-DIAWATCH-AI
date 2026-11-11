@@ -1,54 +1,45 @@
 <!DOCTYPE html>
 <html lang="id">
-
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Riwayat Skrining & Tren Risiko | DiaWatch AI</title>
-  <meta name="description" content="Pantau riwayat dan tren perubahan skor risiko diabetes Anda dari waktu ke waktu.">
+  <title>Riwayat Skrining Kesehatan | DiaWatch AI</title>
+  <meta name="description" content="Lihat kembali jawaban kuesioner, hasil skrining, dan saran personal yang pernah Anda terima.">
   <link rel="stylesheet" href="css/style.css">
 </head>
-
 <body>
-  <!-- Header / Navigation -->
   <div id="nav"></div>
 
   <main class="wrap">
-    <!-- Page Header & Action -->
-    <div
-      style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;margin-bottom:1.75rem">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;margin-bottom:1.75rem">
       <div>
         <h1 style="font-size:1.85rem;margin-bottom:0.25rem">Riwayat Skrining Kesehatan</h1>
-        <p class="note">Pantau perkembangan dan tren perubahan estimasi risiko diabetes Anda.</p>
+        <p class="note">Lihat kembali hasil dan jawaban kuesioner Anda dari waktu ke waktu.</p>
       </div>
-      <div>
-        <a href="screening.html" class="btn">
-          <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="12" y1="5" x2="12" y2="19" />
-            <line x1="5" y1="12" x2="19" y2="12" />
-          </svg>
-          <span>Skrining Baru</span>
-        </a>
-      </div>
+      <a href="screening.html" class="btn">
+        <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <line x1="12" y1="5" x2="12" y2="19"/>
+          <line x1="5" y1="12" x2="19" y2="12"/>
+        </svg>
+        <span>Skrining Baru</span>
+      </a>
     </div>
 
-    <!-- History Summary Strip (Injected by history.js if data exists) -->
-    <div id="history-summary" class="dash-stats-grid hide"></div>
+    <p class="note" style="margin-bottom:1.2rem">
+      Hasil adalah klasifikasi model atas data kuesioner, bukan diagnosis atau persentase risiko klinis.
+      Perubahan label antar-skrining tidak otomatis berarti kondisi kesehatan membaik atau memburuk.
+    </p>
 
-    <!-- Main List Container -->
-    <div id="list">
-      <div class="card">
-        <p class="note">Memuat catatan riwayat Anda...</p>
-      </div>
+    <div id="history-summary" class="dash-stats-grid hide" aria-label="Ringkasan riwayat skrining"></div>
+
+    <div id="list" aria-live="polite">
+      <div class="card"><p class="note">Memuat catatan riwayat Anda...</p></div>
     </div>
   </main>
 
-  <!-- Global Footer -->
   <footer class="footer">
     <div class="footer-container">
-      <div>
-        <b>DiaWatch AI</b> &copy; 2026. Pantau kesehatan Anda secara berkala.
-      </div>
+      <div><b>DiaWatch AI</b> &copy; 2026. Pantau kesehatan Anda secara berkala.</div>
       <div class="footer-links">
         <a href="index.html">Beranda</a>
         <a href="screening.html">Skrining</a>
@@ -58,8 +49,7 @@
 
   <script src="js/config.js"></script>
   <script src="js/common.js"></script>
-  <script type="module" src="js/api.js"></script>
+  <!-- history.js mengimpor api.js, jadi tidak perlu script api.js terpisah. -->
   <script type="module" src="js/history.js"></script>
 </body>
-
 </html>

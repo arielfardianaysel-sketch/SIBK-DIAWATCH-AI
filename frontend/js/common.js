@@ -3,13 +3,19 @@
  */
 const CFG = window.APP_CONFIG || { USE_MOCK: false, API_URL: 'http://127.0.0.1:8000' };
 
-// Session management (terintegrasi dengan sesi Supabase Auth)
+// Session management (terintegrasi penuh dengan sesi Supabase Auth)
 const getSession = () => {
   try {
     const saved = JSON.parse(localStorage.getItem('dw_session') || 'null');
-    if (saved && saved.user) return saved;
 
-    // Fallback: sinkronisasi otomatis bila sudah login di Supabase Auth
+    // Hapus sesi lama jika masih menggunakan token mock dari mode sebelumnya
+    if (saved && (!saved.token || String(saved.token).startsWith('mock-'))) {
+      localStorage.removeItem('dw_session');
+    } else if (saved && saved.user && saved.token) {
+      return saved;
+    }
+
+    // Sinkronisasi otomatis dengan token sesi Supabase Auth di localStorage
     for (let i = 0; i < localStorage.length; i++) {
       const k = localStorage.key(i);
       if (k && k.startsWith('sb-') && k.endsWith('-auth-token')) {

@@ -26,7 +26,22 @@ if (msgType === 'need_login' && noticeBox) {
   noticeBox.classList.remove('hide');
 }
 
-// Error notification handler
+// Error notification handler (dengan terjemahan pesan error Supabase Auth)
+function formatSupabaseAuthError(err) {
+  const raw = err?.message || String(err || '');
+  const lower = raw.toLowerCase();
+  if (lower.includes('invalid login credentials')) {
+    return 'Email atau kata sandi salah, atau akun belum terdaftar di Supabase Authentication (pastikan akun terdaftar di menu Authentication > Users, atau daftar lewat tab Daftar Akun Baru).';
+  }
+  if (lower.includes('email not confirmed')) {
+    return 'Email Anda belum dikonfirmasi. Silakan buka kotak masuk email Anda dan klik link verifikasi dari Supabase, atau nonaktifkan "Confirm email" di Supabase Dashboard (Authentication > Providers > Email).';
+  }
+  if (lower.includes('user already registered')) {
+    return 'Email ini sudah terdaftar di Supabase. Silakan masuk menggunakan tab Masuk Akun.';
+  }
+  return raw || 'Terjadi kesalahan. Silakan coba lagi.';
+}
+
 function showError(msg) {
   if (errText) errText.textContent = msg || '';
   if (errBox) {
@@ -121,7 +136,8 @@ function attachSubmit(form, apiFn) {
       }
       location.href = targetUrl;
     } catch (err) {
-      showError(err.message || 'Terjadi kesalahan. Silakan coba lagi.');
+      console.error('Supabase Auth Error:', err);
+      showError(formatSupabaseAuthError(err));
       btn.disabled = false;
       btn.innerHTML = originalText;
     }
@@ -130,7 +146,9 @@ function attachSubmit(form, apiFn) {
 
 // Handle Register submit
 attachSubmit(fReg, async (data) => {
-  if (!data.name || data.name.trim().length < 2) {
+  const email = (data.email || '').trim();
+  const name = (data.name || '').trim();
+  if (!name || name.length < 2) {
     throw new Error('Silakan masukkan nama lengkap yang valid.');
   }
   if (!data.password || data.password.length < 6) {
@@ -143,14 +161,14 @@ attachSubmit(fReg, async (data) => {
   if (isNaN(birthDate.getTime()) || birthDate > new Date()) {
     throw new Error('Tanggal lahir tidak valid atau berada di masa depan.');
   }
-  const result = await registerUser(data.email, data.password, data.name.trim(), data.birth_date);
+  const result = await registerUser(email, data.password, name, data.birth_date);
   const user = result.user;
   return {
     token: result.session?.access_token || null,
     user: {
       id: user?.id,
-      name: data.name.trim(),
-      email: user?.email || data.email,
+      name,
+      email: user?.email || email,
       birth_date: data.birth_date,
     },
   };
@@ -158,10 +176,11 @@ attachSubmit(fReg, async (data) => {
 
 // Handle Login submit
 attachSubmit(fLogin, async (data) => {
-  if (!data.email || !data.password) {
+  const email = (data.email || '').trim();
+  if (!email || !data.password) {
     throw new Error('Silakan isi email dan kata sandi Anda.');
   }
-  const result = await loginUser(data.email, data.password);
+  const result = await loginUser(email, data.password);
   const user = result.user;
   let displayName = user?.user_metadata?.display_name;
   if (!displayName) {
@@ -177,7 +196,7 @@ attachSubmit(fLogin, async (data) => {
     user: {
       id: user?.id,
       name: displayName || user?.email?.split('@')[0] || 'Pengguna',
-      email: user?.email || data.email,
+      email: user?.email || email,
       birth_date: user?.user_metadata?.birth_date || null,
     },
   };
