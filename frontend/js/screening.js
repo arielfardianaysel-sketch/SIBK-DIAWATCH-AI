@@ -18,7 +18,7 @@ const STEPS = [
     sub: 'Informasi dasar antropometri untuk menghitung Indeks Massa Tubuh (BMI) dan kategori usia klinis Anda.',
     f: [
       sel('sex_uci', 'Jenis Kelamin Biologis', [['0', 'Perempuan'], ['1', 'Laki-laki']], 'Digunakan untuk kalkulasi faktor metabolik.'),
-      { name: 'age_years', text: 'Usia Saat Ini', t: 'num', min: 18, max: 100, unit: 'tahun', placeholder: 'Contoh: 25' },
+      { name: 'age_years', text: 'Usia Saat Ini', t: 'num', min: 18, max: 100, integer: true, readonly: true, unit: 'tahun', placeholder: 'Otomatis dari tanggal lahir', hint: 'Dihitung dari tanggal lahir akun dan tidak dapat diedit.' },
       { name: 'height_cm', text: 'Tinggi Badan', t: 'num', min: 100, max: 220, unit: 'cm', placeholder: 'Contoh: 170' },
       { name: 'weight_kg', text: 'Berat Badan', t: 'num', min: 25, max: 300, unit: 'kg', placeholder: 'Contoh: 68' }
     ]
@@ -44,7 +44,7 @@ const STEPS = [
       q('Fruits', 'Mengonsumsi buah minimal satu kali setiap hari?'),
       q('Veggies', 'Mengonsumsi sayuran hijau atau sayur mayur setiap hari?'),
       q('HvyAlcoholConsump', 'Mengonsumsi alkohol dalam jumlah berlebih?', 'Lebih dari 14 gelas per minggu (pria) atau 7 gelas (wanita).'),
-      { name: 'sugary_days_per_week', text: 'Frekuensi konsumsi minuman atau makanan manis tambahan dalam seminggu', hint: 'Masukkan jumlah hari per minggu (0 hingga 7 hari)', t: 'num', min: 0, max: 7, unit: 'hari/minggu', placeholder: '0 - 7' }
+      { name: 'sugary_days_per_week', text: 'Frekuensi konsumsi minuman atau makanan manis tambahan dalam seminggu', hint: 'Masukkan jumlah hari per minggu (0 hingga 7 hari)', t: 'num', integer: true, min: 0, max: 7, unit: 'hari/minggu', placeholder: '0 - 7' }
     ]
   },
   {
@@ -52,8 +52,8 @@ const STEPS = [
     sub: 'Evaluasi kebugaran umum dan jumlah hari di mana kondisi Anda terasa kurang optimal.',
     f: [
       sel('GenHlth', 'Secara umum, bagaimana Anda menilai kondisi kesehatan Anda saat ini?', lv(['Sangat Baik', 'Baik Sekali', 'Baik', 'Cukup', 'Buruk'])),
-      { name: 'MentHlth', text: 'Jumlah hari kesehatan mental terasa kurang baik', hint: 'Termasuk stres, depresi, atau cemas (dalam 30 hari terakhir)', t: 'num', min: 0, max: 30, unit: 'hari', placeholder: '0 - 30' },
-      { name: 'PhysHlth', text: 'Jumlah hari kondisi fisik terganggu oleh sakit atau cedera', hint: 'Dalam 30 hari terakhir', t: 'num', min: 0, max: 30, unit: 'hari', placeholder: '0 - 30' },
+      { name: 'MentHlth', text: 'Jumlah hari kesehatan mental terasa kurang baik', hint: 'Termasuk stres, depresi, atau cemas (dalam 30 hari terakhir)', t: 'num', integer: true, min: 0, max: 30, unit: 'hari', placeholder: '0 - 30' },
+      { name: 'PhysHlth', text: 'Jumlah hari kondisi fisik terganggu oleh sakit atau cedera', hint: 'Dalam 30 hari terakhir', t: 'num', integer: true, min: 0, max: 30, unit: 'hari', placeholder: '0 - 30' },
       q('DiffWalk', 'Apakah Anda mengalami kesulitan berjalan atau menaiki tangga?')
     ]
   }
@@ -62,17 +62,34 @@ const STEPS = [
 let cur = 0;
 const ans = {};
 
-// Pre-fill age_years from session birth_date if available
-const currentSession = getSession();
-if (currentSession?.user?.birth_date) {
-  const computedAge = Math.floor((new Date() - new Date(currentSession.user.birth_date)) / (365.25 * 864e5));
-  if (!isNaN(computedAge) && computedAge >= 18 && computedAge <= 100) {
-    ans.age_years = String(computedAge);
-  }
+function ageFromBirthDate(birthDate, today = new Date()) {
+  if (typeof birthDate !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(birthDate)) return null;
+  const [year, month, day] = birthDate.split('-').map(Number);
+  const birth = new Date(year, month - 1, day);
+  if (birth.getFullYear() !== year || birth.getMonth() !== month - 1 || birth.getDate() !== day || birth > today) return null;
+  const birthdayPending = today.getMonth() < month - 1 ||
+    (today.getMonth() === month - 1 && today.getDate() < day);
+  return today.getFullYear() - year - Number(birthdayPending);
 }
 
+function refreshAge() {
+  const age = ageFromBirthDate(getSession()?.user?.birth_date);
+  ans.age_years = age === null ? '' : String(age);
+}
+
+function numericIsValid(value, field) {
+  if (value === '' || value == null) return false;
+  const number = Number(value);
+  return Number.isFinite(number) && number >= field.min && number <= field.max &&
+    (!field.integer || Number.isInteger(number));
+}
+
+refreshAge();
+
 function fieldHtml(f, idx) {
-  const hintText = f.hint ? `<span class="hint">${f.hint}</span>` : '';
+  const hint = f.name === 'age_years' && ans.age_years === ''
+    ? 'Tanggal lahir akun belum tersedia atau tidak valid. Lengkapi tanggal lahir akun sebelum melanjutkan.' : f.hint;
+  const hintText = hint ? `<span class="hint">${hint}</span>` : '';
   const qNum = idx != null ? `<span class="q-badge">${idx + 1}</span>` : '';
 
   if (f.t === 'yn') {
@@ -128,7 +145,7 @@ function fieldHtml(f, idx) {
         </div>
       </div>
       <div class="input-with-unit" style="margin-top:0.4rem">
-        <input id="${f.name}" name="${f.name}" type="number" min="${f.min}" max="${f.max}" step="any" placeholder="${f.placeholder || ''}" inputmode="numeric" value="${ans[f.name] ?? ''}">
+        <input id="${f.name}" name="${f.name}" type="number" min="${f.min}" max="${f.max}" step="${f.integer ? '1' : 'any'}" ${f.readonly ? 'readonly aria-readonly="true"' : ''} placeholder="${f.placeholder || ''}" inputmode="${f.integer ? 'numeric' : 'decimal'}" value="${ans[f.name] ?? ''}">
         ${f.unit ? `<span class="input-unit-label">${f.unit}</span>` : ''}
       </div>
     </div>
@@ -190,6 +207,7 @@ function updateLiveBmi() {
 }
 
 function draw() {
+  refreshAge();
   const s = STEPS[cur];
   updateStepIndicator();
 
@@ -227,25 +245,38 @@ function draw() {
   $('#next-text').textContent = cur === STEPS.length - 1 ? 'Analisis Risiko dengan AI Sekarang' : 'Lanjut ke Tahap Berikutnya';
   $('#err').classList.add('hide');
 
-  // Attach live listener for BMI inputs in Step 0
-  if (cur === 0) {
-    const hInput = $('#height_cm');
-    const wInput = $('#weight_kg');
-    if (hInput && wInput) {
-      hInput.oninput = () => { ans.height_cm = hInput.value; updateLiveBmi(); };
-      wInput.oninput = () => { ans.weight_kg = wInput.value; updateLiveBmi(); };
+  s.f.filter(f => f.t === 'num' && !f.readonly).forEach(f => {
+    const input = document.getElementById(f.name);
+    function constrain(onBlur = false) {
+      if (input.value !== '') {
+        const number = Number(input.value);
+        if (Number.isFinite(number)) {
+          if (number > f.max) input.value = String(f.max);
+          if (number < 0 || (onBlur && number < f.min)) input.value = String(f.min);
+        }
+      }
+      input.setCustomValidity(input.value !== '' && !numericIsValid(input.value, f)
+        ? `Masukkan ${f.integer ? 'bilangan bulat' : 'angka'} antara ${f.min} dan ${f.max}.` : '');
+      ans[f.name] = input.value;
       updateLiveBmi();
     }
-  } else {
-    updateLiveBmi();
-  }
+    input.addEventListener('input', () => constrain());
+    input.addEventListener('blur', () => constrain(true));
+  });
+  updateLiveBmi();
 }
 
 function collect() {
+  refreshAge();
   const bad = [];
   STEPS[cur].f.forEach((f) => {
     let val;
-    if (f.t === 'yn') {
+    if (f.name === 'age_years') {
+      // Use the account date, even if the DOM value was changed externally.
+      val = ans.age_years;
+      const input = document.getElementById('age_years');
+      if (input) input.value = val;
+    } else if (f.t === 'yn') {
       const checked = document.querySelector(`[name="${f.name}"]:checked`);
       val = checked ? checked.value : '';
     } else {
@@ -259,9 +290,8 @@ function collect() {
     }
 
     if (f.t === 'num') {
-      const numVal = Number(val);
-      if (isNaN(numVal) || numVal < f.min || numVal > f.max) {
-        bad.push(`${f.text} (harus antara ${f.min} - ${f.max})`);
+      if (!numericIsValid(val, f)) {
+        bad.push(`${f.text} (harus ${f.integer ? 'bilangan bulat ' : ''}antara ${f.min} - ${f.max})`);
         return;
       }
     }
@@ -273,6 +303,13 @@ function collect() {
 
 $('#next').onclick = async () => {
   const bad = collect();
+  if (cur === STEPS.length - 1) {
+    for (const field of STEPS.flatMap(step => step.f).filter(field => field.t === 'num')) {
+      if (!numericIsValid(ans[field.name], field) && !bad.some(message => message.startsWith(field.text))) {
+        bad.push(`${field.text} (harus ${field.integer ? 'bilangan bulat ' : ''}antara ${field.min} - ${field.max})`);
+      }
+    }
+  }
   const errBox = $('#err');
   const errText = $('#err-text');
 
@@ -294,7 +331,7 @@ $('#next').onclick = async () => {
 
   // Final Step: Submit payload sesuai kontrak ScreeningForm di backend/questionnaire.py
   const payload = {
-    age_years: Math.round(Number(ans.age_years)),
+    age_years: Number(ans.age_years),
     sex_uci: Number(ans.sex_uci),
     height_cm: Number(ans.height_cm),
     weight_kg: Number(ans.weight_kg),
@@ -309,10 +346,10 @@ $('#next').onclick = async () => {
     Veggies: Number(ans.Veggies),
     HvyAlcoholConsump: Number(ans.HvyAlcoholConsump),
     GenHlth: Number(ans.GenHlth),
-    MentHlth: Math.round(Number(ans.MentHlth)),
-    PhysHlth: Math.round(Number(ans.PhysHlth)),
+    MentHlth: Number(ans.MentHlth),
+    PhysHlth: Number(ans.PhysHlth),
     DiffWalk: Number(ans.DiffWalk),
-    sugary_days_per_week: Math.round(Number(ans.sugary_days_per_week)),
+    sugary_days_per_week: Number(ans.sugary_days_per_week),
     family_history: Number(ans.family_history),
   };
 
