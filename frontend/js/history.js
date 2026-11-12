@@ -4,7 +4,7 @@
  * mengembalikan array secara langsung.
  * Menggunakan CSS class DiaWatch yang sudah ada; tidak perlu mengganti style.css.
  */
-import { getHistory, deleteMyScreening } from './api.js';
+import { getHistory, deleteMyScreening, modelScore } from './api.js';
 
 // Autentikasi tetap divalidasi oleh FastAPI; guard() hanya membantu navigasi UI.
 if (typeof window.guard === 'function') window.guard();
@@ -34,6 +34,7 @@ function normalizeItem(raw) {
     predicted_label: label,
     bmi: nullableNumber(raw?.bmi ?? raw?.answers?.BMI ?? raw?.questionnaire_answers?.BMI),
     model_name: raw?.model_name ?? 'Qwen DiaWatch',
+    score: modelScore(raw),
   };
 }
 
@@ -161,6 +162,7 @@ function renderItems(items) {
           <p class="note" style="margin-top:0.25rem;font-size:0.82rem">
             Model: ${safeModel}
           </p>
+          <p class="note">${item.score ? `${item.score.percent.toFixed(1)}% · skor ${escapeHtml(item.score.category)} (model, bukan risiko klinis)` : 'Persentase dan level belum tersedia'}</p>
         </div>
         <div style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap">
           ${details}

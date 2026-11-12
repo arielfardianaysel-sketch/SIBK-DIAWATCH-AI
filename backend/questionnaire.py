@@ -73,33 +73,3 @@ def user_prompt(features: dict) -> str:
         lines.append(f"{key}: {value}")
     lines.append("Label Diabetes_binary (0 atau 1):")
     return "\n".join(lines)
-
-
-def recommendations(form: ScreeningForm, bmi: float) -> list[dict]:
-    source = "https://www.cdc.gov/diabetes/prevention-type-2/"
-    result = []
-    def add(title, description, reason):
-        result.append({"title": title, "description": description,
-                       "reason_from_questionnaire": reason, "source_url": source})
-    if form.sugary_days_per_week >= 4:
-        add("Kurangi gula tambahan", "Pertimbangkan lebih sering memilih air putih dan mengurangi minuman berpemanis secara bertahap.",
-            "Konsumsi makanan/minuman manis pada sedikitnya 4 hari per minggu")
-    if form.PhysActivity == 0:
-        add("Mulai lebih aktif", "Tambahkan aktivitas fisik secara bertahap sesuai kemampuan. Panduan umum untuk kebanyakan orang dewasa sekitar 150 menit aktivitas sedang per minggu.",
-            "Tidak ada aktivitas fisik di luar pekerjaan pada 30 hari terakhir")
-    if form.Fruits == 0 or form.Veggies == 0:
-        add("Perbanyak makanan berserat", "Usahakan makan buah dan sayuran lebih teratur sebagai bagian dari pola makan seimbang.",
-            "Konsumsi buah atau sayur kurang dari sekali per hari")
-    if form.family_history == 1:
-        add("Perhatikan riwayat keluarga", "Pertimbangkan berkonsultasi dengan tenaga kesehatan mengenai kebutuhan pemeriksaan gula darah.",
-            "Memiliki keluarga dekat dengan diabetes (tidak masuk fitur prediksi AI)")
-    if form.HighBP == 1 or form.HighChol == 1:
-        add("Pantau kesehatan", "Ikuti anjuran dan pemantauan dari tenaga kesehatan terkait tekanan darah atau kolesterol.",
-            "Riwayat tekanan darah atau kolesterol tinggi")
-    if bmi >= 25:
-        add("Tinjau pola hidup", "Diskusikan pola makan dan aktivitas fisik dengan tenaga kesehatan bila diperlukan. BMI bukan diagnosis.",
-            "BMI >= 25; aturan edukasi umum")
-    if not result:
-        add("Pertahankan kebiasaan sehat", "Lanjutkan aktivitas fisik dan pola makan seimbang. Bila ada keluhan, konsultasikan dengan tenaga kesehatan.",
-            "Tidak ada pemicu saran spesifik dari aturan prototipe")
-    return result
