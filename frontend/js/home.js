@@ -63,7 +63,8 @@ function renderDashboardStats(history) {
     const latest = history[0];
     const r = latest.result;
     const bmi = latest.bmi ?? latest.answers?.BMI;
-    const statusText = latest.predicted_label === 1 ? 'Berisiko (Label 1)' : 'Rendah (Label 0)';
+    const statusText = latest.predicted_label === 1 ? 'Indikasi ditemukan' :
+      latest.predicted_label === 0 ? 'Indikasi tidak ditemukan' : 'Label belum tersedia';
     const scoreDisplay =
       latest.experimental_score_percent != null
         ? `${Math.round(latest.experimental_score_percent)}%`
@@ -71,8 +72,8 @@ function renderDashboardStats(history) {
 
     if (lastRiskEl) {
       lastRiskEl.innerHTML = `
-        <span class="pill ${esc(r.risk_category)}">${esc(statusText)}</span>
-        ${scoreDisplay ? `<span style="font-size:1.1rem;font-weight:700;margin-left:0.3rem">${esc(scoreDisplay)}</span>` : ''}
+        <span class="pill ${esc(r.risk_category || '')}">${esc(statusText)}</span>
+        ${scoreDisplay ? `<span style="font-size:1.1rem;font-weight:700;margin-left:0.3rem">${esc(scoreDisplay)} · skor ${esc(r.risk_category)}</span>` : '<span class="note">Skor belum tersedia</span>'}
       `;
     }
 
@@ -95,12 +96,7 @@ function renderDashboardStats(history) {
             ? latest.recommendations.map(rec => rec.title).join(', ')
             : 'Tidak ada faktor risiko tinggi yang menonjol');
 
-      const barWidth =
-        latest.experimental_score_percent != null
-          ? Math.round(latest.experimental_score_percent)
-          : latest.predicted_label === 1
-          ? 85
-          : 20;
+      const barWidth = latest.experimental_score_percent;
 
       recentBoxEl.innerHTML = `
         <div class="card" style="margin-bottom:0">
@@ -112,7 +108,7 @@ function renderDashboardStats(history) {
             <a href="report.html?id=${encodeURIComponent(latest.id)}" class="btn btn-sm">Lihat Laporan Lengkap</a>
           </div>
           <p class="note" style="margin-bottom:0.75rem">Catatan / Faktor Utama: <b>${esc(topFactorsText)}</b></p>
-          <div class="bar" style="margin-bottom:0.5rem"><i class="${esc(r.risk_category)}" style="width:${barWidth}%"></i></div>
+          ${barWidth != null ? `<div class="bar" style="margin-bottom:0.5rem"><i class="${esc(r.risk_category)}" style="width:${barWidth}%"></i></div><p class="note">Skor model terkalibrasi, bukan persentase risiko klinis.</p>` : '<p class="note">Persentase dan level menunggu kalibrasi model.</p>'}
         </div>
       `;
     }

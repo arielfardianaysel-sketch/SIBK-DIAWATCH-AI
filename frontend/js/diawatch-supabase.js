@@ -63,7 +63,7 @@ async function getBearerToken() {
   return token; // Do not log or send this token to anyone.
 }
 
-async function backendRequest(path, { method = 'GET', body } = {}) {
+export async function backendRequest(path, { method = 'GET', body } = {}) {
   const token = await getBearerToken();
   let response;
   try {

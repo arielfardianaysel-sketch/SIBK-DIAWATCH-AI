@@ -51,7 +51,7 @@ const STEPS = [
     title: 'Kondisi Kesehatan Fisik & Mental',
     sub: 'Evaluasi kebugaran umum dan jumlah hari di mana kondisi Anda terasa kurang optimal.',
     f: [
-      sel('GenHlth', 'Secara umum, bagaimana Anda menilai kondisi kesehatan Anda saat ini?', lv(['Sangat Baik', 'Baik', 'Cukup', 'Kurang Baik', 'Buruk'])),
+      sel('GenHlth', 'Secara umum, bagaimana Anda menilai kondisi kesehatan Anda saat ini?', lv(['Sangat Baik', 'Baik Sekali', 'Baik', 'Cukup', 'Buruk'])),
       { name: 'MentHlth', text: 'Jumlah hari kesehatan mental terasa kurang baik', hint: 'Termasuk stres, depresi, atau cemas (dalam 30 hari terakhir)', t: 'num', min: 0, max: 30, unit: 'hari', placeholder: '0 - 30' },
       { name: 'PhysHlth', text: 'Jumlah hari kondisi fisik terganggu oleh sakit atau cedera', hint: 'Dalam 30 hari terakhir', t: 'num', min: 0, max: 30, unit: 'hari', placeholder: '0 - 30' },
       q('DiffWalk', 'Apakah Anda mengalami kesulitan berjalan atau menaiki tangga?')

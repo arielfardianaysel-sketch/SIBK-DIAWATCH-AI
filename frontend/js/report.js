@@ -4,7 +4,7 @@
  * API: GET /api/history/{id}
  */
 
-import { getHistoryDetail } from "./api.js";
+import { getHistoryDetail, modelScore, requestRecommendations } from "./api.js";
 
 if (typeof window.guard === "function") {
   window.guard();
@@ -158,15 +158,16 @@ const questionGroups = [
 ];
 
 function renderSummary(report) {
-  const label = Number(report.predicted_label);
+  const score = modelScore(report);
+  const label = report.predicted_label === 0 || report.predicted_label === 1 ? report.predicted_label : null;
 
   const isPositive = label === 1;
   const isNegative = label === 0;
 
   const categoryText = isPositive
-    ? "Kelas 1"
+    ? "Indikasi ditemukan"
     : isNegative
-      ? "Kelas 0"
+      ? "Indikasi tidak ditemukan"
       : "Tidak tersedia";
 
   const categoryDesc = isPositive
@@ -191,6 +192,9 @@ function renderSummary(report) {
       </div>
       <p class="note" style="margin-top:.6rem">
         ${esc(categoryDesc)}
+      </p>
+      <p class="note" style="margin-top:.6rem">
+        ${score ? `<strong>${score.percent.toFixed(1)}% · skor ${esc(score.category)}</strong><br>Skor model terkalibrasi, bukan risiko klinis.` : 'Persentase dan level belum tersedia; kalibrasi model belum lengkap.'}
       </p>
     </div>
 
@@ -223,7 +227,7 @@ function renderSummary(report) {
 }
 
 function renderExplanation(report) {
-  const label = Number(report.predicted_label);
+  const label = report.predicted_label === 0 || report.predicted_label === 1 ? report.predicted_label : null;
 
   let message;
 
@@ -259,8 +263,7 @@ function renderExplanation(report) {
       ${esc(report.model_name || "Qwen DiaWatch")}
     </p>
     <p class="note" style="margin-top:.5rem">
-      Persentase risiko medis tidak ditampilkan
-      karena model belum divalidasi secara klinis.
+      ${modelScore(report) ? 'Persentase adalah skor model terhadap label survei. Skor ini bukan diagnosis atau peluang pasti terkena diabetes.' : 'Persentase tidak diisi otomatis dari label 0/1. Skor dan level akan tersedia setelah kalibrasi serta evaluasi model.'}
     </p>
   `;
 }
@@ -314,19 +317,40 @@ function safeSourceUrl(value) {
 
 function renderRecommendations(report) {
   const tips = Array.isArray(report.recommendations)
-    ? report.recommendations
+    ? report.recommendations.filter(tip => tip?.kind !== "model_score")
     : [];
+
+  const retry = `<button type="button" class="btn ghost btn-sm" id="retry-recommendations" style="margin-top:1rem">${tips.length ? 'Buat ulang saran dengan AI' : 'Buat saran personal dengan AI'}</button><p class="note" id="recommendation-state" role="status" style="margin-top:.5rem"></p>`;
+  function attachRetry() {
+    document.getElementById("retry-recommendations").addEventListener("click", async event => {
+      const button = event.currentTarget;
+      button.disabled = true;
+      const state = document.getElementById("recommendation-state");
+      state.textContent = "AI sedang menyusun saran berdasarkan jawaban dan referensi kesehatan...";
+      try {
+        const result = await requestRecommendations(report.id);
+        renderRecommendations({ ...report, recommendations: result.recommendations });
+      } catch (error) {
+        state.textContent = error.message || "Saran belum berhasil dibuat. Silakan coba lagi.";
+        button.disabled = false;
+      }
+    });
+  }
 
   if (tips.length === 0) {
     recommendationsEl.innerHTML = `
       <p class="note">
-        Belum ada rekomendasi yang tersimpan.
+        Saran personal AI belum tersedia untuk hasil ini. Hasil klasifikasi Anda tetap tersimpan.
       </p>
-    `;
+    ` + retry;
+    attachRetry();
     return;
   }
 
-  recommendationsEl.innerHTML = tips.map((tip, index) => {
+  const origin = tips.every(tip => tip?.generator === "qwen-rag-v1")
+    ? '<p class="note">Saran disusun Qwen dari jawaban Anda dan referensi CDC. Tinjau bersama tenaga kesehatan bila diperlukan.</p>'
+    : '<p class="note">Saran tersimpan dari versi sebelumnya. Anda dapat membuat ulang dengan AI.</p>';
+  recommendationsEl.innerHTML = origin + tips.map((tip, index) => {
     const title = typeof tip === "string"
       ? `Rekomendasi ${index + 1}`
       : tip.title || `Rekomendasi ${index + 1}`;
@@ -361,12 +385,13 @@ function renderRecommendations(report) {
              target="_blank"
              rel="noopener noreferrer"
              style="font-size:.85rem">
-            Lihat sumber panduan kesehatan
+            Referensi: ${esc(tip.source_title || "panduan kesehatan")}
           </a>
         ` : ""}
       </article>
     `;
-  }).join("");
+  }).join("") + retry;
+  attachRetry();
 }
 
 function showError(message) {

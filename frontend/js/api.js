@@ -15,6 +15,7 @@ import {
   getHistoryDetail,
   submitScreening,
   deleteMyScreening,
+  backendRequest,
 } from "./diawatch-supabase.js";
 
 export {
@@ -49,6 +50,25 @@ export const LABEL = {
   sugary_days_per_week: "Konsumsi minuman/makanan manis",
   family_history: "Riwayat diabetes keluarga",
 };
+
+export async function requestRecommendations(id) {
+  return backendRequest(`/api/history/${encodeURIComponent(id)}/recommendations`, { method: "POST" });
+}
+
+export function modelScore(item) {
+  const prediction = item?.prediction;
+  const metadata = Array.isArray(item?.recommendations)
+    ? item.recommendations.find(tip => tip?.kind === "model_score") : null;
+  const value = prediction?.score_status === "calibrated" ? {
+    percent: prediction.experimental_score_percent, category: prediction.risk_category,
+    calibration_id: prediction.calibration_id,
+  } : metadata;
+  if (!value || !value.calibration_id || typeof value.percent !== "number" ||
+      !Number.isFinite(value.percent) || value.percent < 0 || value.percent > 100 ||
+      !["rendah", "sedang", "tinggi"].includes(value.category)) return null;
+  if (metadata === value && value.percent !== item.experimental_score_percent) return null;
+  return value;
+}
 
 /**
  * Menentukan faktor risiko utama dari jawaban kuesioner.
@@ -90,41 +110,27 @@ export function normalizeHistoryItem(item, fallbackAnswers = null) {
       ? +(rawAnswers.weight_kg / ((rawAnswers.height_cm / 100) ** 2)).toFixed(1)
       : null);
 
-  const predictedLabel =
-    item.predicted_label ??
-    item.prediction?.predicted_label ??
-    (item.result?.risk_category === "tinggi" || item.result?.risk_category === "sedang" ? 1 : 0);
-
-  const expScorePct =
-    item.experimental_score_percent ??
-    item.prediction?.experimental_score_percent ??
-    (item.result?.probability != null ? Math.round(item.result.probability * 100) : null);
-
-  // Kategori visual untuk pill CSS ("rendah" | "sedang" | "tinggi")
-  const riskCategory =
-    item.result?.risk_category ||
-    (Number(predictedLabel) === 1 ? "tinggi" : "rendah");
+  const rawLabel = item.predicted_label ?? item.prediction?.predicted_label ?? item.result?.predicted_label;
+  const predictedLabel = rawLabel === 0 || rawLabel === 1 ? rawLabel : null;
+  const score = modelScore(item);
+  const expScorePct = score?.percent ?? null;
+  const riskCategory = score?.category ?? null;
 
   const riskLabelText =
-    Number(predictedLabel) === 1
+    predictedLabel === 1
       ? "Terindikasi Berisiko (Label 1)"
-      : "Tidak Terindikasi (Label 0)";
+      : predictedLabel === 0 ? "Tidak Terindikasi (Label 0)" : "Label belum tersedia";
 
   const probability =
-    expScorePct != null
-      ? Number(expScorePct) / 100
-      : item.result?.probability != null
-      ? Number(item.result.probability)
-      : Number(predictedLabel) === 1
-      ? 1
-      : 0;
+    expScorePct != null ? expScorePct / 100 : null;
 
   const topFactors =
     item.result?.top_factors && item.result.top_factors.length
       ? item.result.top_factors
       : extractTopFactors(rawAnswers, bmi);
 
-  const recommendations = item.recommendations || item.result?.recommendations || [];
+  const recommendations = (item.recommendations || item.result?.recommendations || [])
+    .filter(tip => tip?.kind !== "model_score");
 
   const normalizedAnswers = {
     ...rawAnswers,
@@ -140,7 +146,7 @@ export function normalizeHistoryItem(item, fallbackAnswers = null) {
     id,
     created_at,
     bmi,
-    predicted_label: Number(predictedLabel),
+    predicted_label: predictedLabel,
     experimental_score_percent: expScorePct,
     model_name: item.model_name || "Qwen3-4B-Instruct-2507 + DiaWatch LoRA (GGUF)",
     recommendations,
@@ -150,16 +156,16 @@ export function normalizeHistoryItem(item, fallbackAnswers = null) {
       created_at,
       risk_category: riskCategory,
       risk_label: riskLabelText,
-      predicted_label: Number(predictedLabel),
+      predicted_label: predictedLabel,
       experimental_score_percent: expScorePct,
       probability,
       top_factors: topFactors,
       recommendations,
       meaning:
         item.prediction?.meaning ||
-        (Number(predictedLabel) === 1
+        (predictedLabel === 1
           ? "Prediabetes/diabetes pada label data survei"
-          : "Tidak diabetes pada label data survei"),
+          : predictedLabel === 0 ? "Tidak diabetes pada label data survei" : "Label belum tersedia"),
       disclaimer:
         item.disclaimer ||
         "Prototipe skrining akademik berbasis data survei, bukan diagnosis atau peluang diabetes masa depan.",
