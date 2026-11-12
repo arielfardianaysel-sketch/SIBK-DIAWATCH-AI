@@ -1,5 +1,3 @@
-// DiaWatch integration for vanilla HTML/JavaScript. Browser/public keys only.
-// IMPORTANT: Never paste sb_secret_*, service_role, or your database password here.
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.0/+esm';
 
 const SUPABASE_URL = 'https://vdtrtpqktkijqfmpcyow.supabase.co';

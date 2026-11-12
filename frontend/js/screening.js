@@ -1,7 +1,3 @@
-/**
- * DiaWatch AI - Multi-Step Screening Wizard Controller
- * Terintegrasi dengan POST /api/predict (submitScreening) pada FastAPI Backend.
- */
 import { submitScreening, normalizeHistoryItem } from "./api.js";
 
 // Protect route: user must be logged in

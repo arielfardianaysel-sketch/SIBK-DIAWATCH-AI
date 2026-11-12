@@ -1,7 +1,3 @@
-/**
- * DiaWatch AI - Frontend API Layer
- * Integrasi antara UI Frontend dengan Supabase Auth & FastAPI Backend.
- */
 import {
   API_BASE_URL,
   supabase,
@@ -51,23 +47,13 @@ export const LABEL = {
   family_history: "Riwayat diabetes keluarga",
 };
 
-export async function requestRecommendations(id) {
-  return backendRequest(`/api/history/${encodeURIComponent(id)}/recommendations`, { method: "POST" });
+export function screeningLabel(label) {
+  return label === 1 ? "Terindikasi diabetes"
+    : label === 0 ? "Tidak terindikasi diabetes" : "Hasil belum tersedia";
 }
 
-export function modelScore(item) {
-  const prediction = item?.prediction;
-  const metadata = Array.isArray(item?.recommendations)
-    ? item.recommendations.find(tip => tip?.kind === "model_score") : null;
-  const value = prediction?.score_status === "calibrated" ? {
-    percent: prediction.experimental_score_percent, category: prediction.risk_category,
-    calibration_id: prediction.calibration_id,
-  } : metadata;
-  if (!value || !value.calibration_id || typeof value.percent !== "number" ||
-      !Number.isFinite(value.percent) || value.percent < 0 || value.percent > 100 ||
-      !["rendah", "sedang", "tinggi"].includes(value.category)) return null;
-  if (metadata === value && value.percent !== item.experimental_score_percent) return null;
-  return value;
+export async function requestRecommendations(id) {
+  return backendRequest(`/api/history/${encodeURIComponent(id)}/recommendations`, { method: "POST" });
 }
 
 /**
@@ -112,17 +98,7 @@ export function normalizeHistoryItem(item, fallbackAnswers = null) {
 
   const rawLabel = item.predicted_label ?? item.prediction?.predicted_label ?? item.result?.predicted_label;
   const predictedLabel = rawLabel === 0 || rawLabel === 1 ? rawLabel : null;
-  const score = modelScore(item);
-  const expScorePct = score?.percent ?? null;
-  const riskCategory = score?.category ?? null;
-
-  const riskLabelText =
-    predictedLabel === 1
-      ? "Terindikasi Berisiko (Label 1)"
-      : predictedLabel === 0 ? "Tidak Terindikasi (Label 0)" : "Label belum tersedia";
-
-  const probability =
-    expScorePct != null ? expScorePct / 100 : null;
+  const riskLabelText = screeningLabel(predictedLabel);
 
   const topFactors =
     item.result?.top_factors && item.result.top_factors.length
@@ -147,25 +123,17 @@ export function normalizeHistoryItem(item, fallbackAnswers = null) {
     created_at,
     bmi,
     predicted_label: predictedLabel,
-    experimental_score_percent: expScorePct,
     model_name: item.model_name || "Qwen3-4B-Instruct-2507 + DiaWatch LoRA (GGUF)",
     recommendations,
     answers: normalizedAnswers,
     result: {
       id,
       created_at,
-      risk_category: riskCategory,
       risk_label: riskLabelText,
       predicted_label: predictedLabel,
-      experimental_score_percent: expScorePct,
-      probability,
       top_factors: topFactors,
       recommendations,
-      meaning:
-        item.prediction?.meaning ||
-        (predictedLabel === 1
-          ? "Prediabetes/diabetes pada label data survei"
-          : predictedLabel === 0 ? "Tidak diabetes pada label data survei" : "Label belum tersedia"),
+      meaning: riskLabelText,
       disclaimer:
         item.disclaimer ||
         "Prototipe skrining akademik berbasis data survei, bukan diagnosis atau peluang diabetes masa depan.",

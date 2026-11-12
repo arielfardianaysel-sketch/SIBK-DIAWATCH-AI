@@ -1,7 +1,4 @@
-/**
- * DiaWatch AI - Home / Dashboard Controller
- */
-import { getHistory, getHistoryDetail, normalizeHistoryItem, LABEL } from "./api.js";
+import { getHistory, getHistoryDetail, normalizeHistoryItem, screeningLabel, LABEL } from "./api.js";
 
 document.addEventListener('DOMContentLoaded', async () => {
   const session = getSession();
@@ -63,17 +60,12 @@ function renderDashboardStats(history) {
     const latest = history[0];
     const r = latest.result;
     const bmi = latest.bmi ?? latest.answers?.BMI;
-    const statusText = latest.predicted_label === 1 ? 'Indikasi ditemukan' :
-      latest.predicted_label === 0 ? 'Indikasi tidak ditemukan' : 'Label belum tersedia';
-    const scoreDisplay =
-      latest.experimental_score_percent != null
-        ? `${Math.round(latest.experimental_score_percent)}%`
-        : '';
+    const statusText = screeningLabel(latest.predicted_label);
+    const pillClass = latest.predicted_label === 1 ? 'high' : latest.predicted_label === 0 ? 'low' : '';
 
     if (lastRiskEl) {
       lastRiskEl.innerHTML = `
-        <span class="pill ${esc(r.risk_category || '')}">${esc(statusText)}</span>
-        ${scoreDisplay ? `<span style="font-size:1.1rem;font-weight:700;margin-left:0.3rem">${esc(scoreDisplay)} · skor ${esc(r.risk_category)}</span>` : '<span class="note">Skor belum tersedia</span>'}
+        <span class="pill ${esc(pillClass)}">${esc(statusText)}</span>
       `;
     }
 
@@ -96,7 +88,6 @@ function renderDashboardStats(history) {
             ? latest.recommendations.map(rec => rec.title).join(', ')
             : 'Tidak ada faktor risiko tinggi yang menonjol');
 
-      const barWidth = latest.experimental_score_percent;
 
       recentBoxEl.innerHTML = `
         <div class="card" style="margin-bottom:0">
@@ -108,7 +99,6 @@ function renderDashboardStats(history) {
             <a href="report.html?id=${encodeURIComponent(latest.id)}" class="btn btn-sm">Lihat Laporan Lengkap</a>
           </div>
           <p class="note" style="margin-bottom:0.75rem">Catatan / Faktor Utama: <b>${esc(topFactorsText)}</b></p>
-          ${barWidth != null ? `<div class="bar" style="margin-bottom:0.5rem"><i class="${esc(r.risk_category)}" style="width:${barWidth}%"></i></div><p class="note">Skor model terkalibrasi, bukan persentase risiko klinis.</p>` : '<p class="note">Persentase dan level menunggu kalibrasi model.</p>'}
         </div>
       `;
     }
@@ -122,7 +112,7 @@ function renderDashboardStats(history) {
           <div style="font-size:2rem;margin-bottom:0.5rem">🩺</div>
           <h3>Mulai Skrining Pertama Anda</h3>
           <p class="note" style="margin:0.5rem auto 1.25rem;max-width:440px">
-            Anda belum memiliki catatan skrining. Luangkan 3-5 menit untuk mengetahui estimasi risiko diabetes Anda hari ini.
+            Anda belum memiliki catatan skrining. Luangkan 3-5 menit untuk mengetahui hasil skrining indikasi diabetes.
           </p>
           <a href="screening.html" class="btn">Mulai Skrining Mandiri</a>
         </div>

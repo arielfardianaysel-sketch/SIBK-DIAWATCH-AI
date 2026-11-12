@@ -1,19 +1,15 @@
-"""Qwen inference, local reference retrieval, and validated model-score artifacts."""
-import hashlib
+"""Qwen classification and local health-reference retrieval."""
 import json
-import math
 import re
 from pathlib import Path
 
 import httpx
 from pydantic import BaseModel, ConfigDict, Field
 
-from questionnaire import FEATURES, SYSTEM_PROMPT, ScreeningForm, user_prompt
+from questionnaire import SYSTEM_PROMPT, ScreeningForm, user_prompt
 
 BACKEND_DIR = Path(__file__).resolve().parent
 KNOWLEDGE_PATH = BACKEND_DIR / "health_knowledge.json"
-CALIBRATION_PATH = BACKEND_DIR / "calibration.json"
-SCORING_VERSION = "label-log-odds-v1"
 HEALTH_SOURCES = {
     "CDC_SMOKING": ("Merokok dan diabetes", "smoking", "https://www.cdc.gov/diabetes/risk-factors/diabetes-and-smoking.html"),
     "CDC_DIET": ("Perencanaan makan", "diet", "https://www.cdc.gov/diabetes/healthy-eating/diabetes-meal-planning.html"),
@@ -27,99 +23,20 @@ class AIUnavailable(RuntimeError):
     """An actionable failure that is safe to show without provider response bodies."""
 
 
-def classification_payload(features: dict, *, scores: bool = False) -> dict:
-    payload = {
+def classification_payload(features: dict) -> dict:
+    return {
         "model": "diawatch",
         "messages": [{"role": "system", "content": SYSTEM_PROMPT},
                      {"role": "user", "content": user_prompt(features)}],
         "temperature": 0, "max_tokens": 4, "stream": False,
     }
-    if scores:
-        payload.update(logprobs=True, top_logprobs=20)
-    return payload
 
 
-def parse_classification(response: dict) -> tuple[int, float | None]:
-    choice = response["choices"][0]
-    text = choice["message"]["content"]
+def parse_classification(response: dict) -> int:
+    text = response["choices"][0]["message"]["content"]
     if not isinstance(text, str) or re.fullmatch(r"\s*[01]\s*", text) is None:
         raise ValueError("Format output model bukan label 0 atau 1")
-    label = int(text.strip())
-    # Only the FIRST generated token is eligible. Later tokens have a different
-    # conditioning context and must not be used to invent a binary probability.
-    logprobs = choice.get("logprobs")
-    content = logprobs.get("content") if isinstance(logprobs, dict) else None
-    if (not isinstance(content, list) or not content or not isinstance(content[0], dict)
-            or content[0].get("token") not in ("0", "1")):
-        return label, None
-    logs = {}
-    candidates = content[0].get("top_logprobs")
-    if not isinstance(candidates, list):
-        return label, None
-    for token in candidates:
-        if isinstance(token, dict) and token.get("token") in ("0", "1"):
-            value = token.get("logprob")
-            if isinstance(value, (int, float)) and math.isfinite(value) and -1e6 < value <= 0:
-                logs[token["token"]] = value
-    if set(logs) != {"0", "1"}:
-        return label, None
-    return label, logs["1"] - logs["0"]
-
-
-def model_signature(revision: str) -> str:
-    data = {"revision": revision, "features": FEATURES, "system": SYSTEM_PROMPT,
-            "prompt": user_prompt(dict.fromkeys(FEATURES, 0)), "scoring": SCORING_VERSION}
-    return hashlib.sha256(json.dumps(data, sort_keys=True).encode()).hexdigest()
-
-
-def load_calibration(revision: str) -> dict | None:
-    if not revision:
-        return None
-    try:
-        data = json.loads(CALIBRATION_PATH.read_text(encoding="utf-8"))
-        if (data["signature"] != model_signature(revision) or data["version"] != SCORING_VERSION
-                or data["evaluation"]["test_count"] < 60 or data["evaluation"]["calibration_count"] < 60
-                or data["evaluation"]["brier_after"] > data["evaluation"]["brier_before"]
-                or data["evaluation"]["roc_auc"] <= 0.5):
-            return None
-        unsigned = {key: value for key, value in data.items() if key != "calibration_id"}
-        expected_id = hashlib.sha256(json.dumps(unsigned, sort_keys=True).encode()).hexdigest()[:16]
-        if data["calibration_id"] != expected_id:
-            return None
-        values = [data[key] for key in ("coefficient", "intercept", "low_threshold", "high_threshold")]
-        if not all(isinstance(v, (int, float)) and math.isfinite(v) for v in values):
-            return None
-        if data["coefficient"] <= 0 or not 0 < data["low_threshold"] < data["high_threshold"] < 1:
-            return None
-        return data
-    except (OSError, ValueError, KeyError, TypeError):
-        return None
-
-
-def calibrated_score(log_odds: float | None, artifact: dict | None) -> dict | None:
-    if log_odds is None or not math.isfinite(log_odds) or artifact is None:
-        return None
-    value = artifact["coefficient"] * log_odds + artifact["intercept"]
-    probability = 1 / (1 + math.exp(-value)) if value >= 0 else math.exp(value) / (1 + math.exp(value))
-    category = "rendah" if probability < artifact["low_threshold"] else (
-        "sedang" if probability < artifact["high_threshold"] else "tinggi")
-    return {"kind": "model_score", "percent": round(100 * probability, 1),
-            "category": category, "calibration_id": artifact["calibration_id"],
-            "low_threshold": artifact["low_threshold"], "high_threshold": artifact["high_threshold"],
-            "score_is_clinical_risk": False}
-
-
-def score_from_record(record: dict) -> dict | None:
-    for item in record.get("recommendations") or []:
-        if not isinstance(item, dict) or item.get("kind") != "model_score":
-            continue
-        percent = item.get("percent")
-        if (isinstance(percent, (int, float)) and math.isfinite(percent) and 0 <= percent <= 100
-                and percent == record.get("experimental_score_percent")
-                and item.get("category") in ("rendah", "sedang", "tinggi")
-                and item.get("calibration_id")):
-            return item
-    return None
+    return int(text.strip())
 
 
 def load_knowledge() -> list[dict]:

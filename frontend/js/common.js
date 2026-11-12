@@ -1,6 +1,3 @@
-/**
- * DiaWatch AI - Common Utilities, State & Navigation Logic
- */
 const CFG = window.APP_CONFIG || { USE_MOCK: false, API_URL: 'http://127.0.0.1:8000' };
 
 // Session management (terintegrasi penuh dengan sesi Supabase Auth)

@@ -1,7 +1,6 @@
 """Exercise the evaluation pipeline with synthetic data and an in-process LLM mock."""
 import importlib.util
 import io
-import json
 import os
 import sys
 import tempfile
@@ -23,7 +22,6 @@ import pandas as pd
 
 import evaluate_model as evaluation
 import evaluation_fallback as fallback
-import ai
 from questionnaire import FEATURES
 
 
@@ -117,59 +115,6 @@ class EvaluationPipelineTests(unittest.TestCase):
         self.assertTrue(result["prediksi_qwen"].isna().all())
         self.assertFalse(png_exists)
         self.assertIn("confusion matrix tidak dibuat", console)
-
-
-class CalibrationTests(unittest.TestCase):
-    def write_split(self, directory, prefix):
-        frame = pd.DataFrame({key: [1] * 60 for key in FEATURES})
-        frame["target"] = [0, 1] * 30
-        frame["BMI"] = 20 + 2 * frame["target"]
-        frame["row_id"] = [f"{prefix}-{i}" for i in range(60)]
-        path = directory / f"{prefix}.csv"
-        frame.to_csv(path, index=False)
-        return path
-
-    def test_calibration_export_and_runtime_loading_use_same_signature(self):
-        if not evaluation.USING_SKLEARN:
-            self.skipTest("Full calibration requires working sklearn")
-
-        def respond(request):
-            body = json.loads(request.content)
-            label = "1" if "BMI: 22\n" in body["messages"][1]["content"] else "0"
-            logs = [{"token": digit, "logprob": -0.2 if digit == label else -2.2} for digit in ("0", "1")]
-            return httpx.Response(200, json={"choices": [{"message": {"content": label},
-                "logprobs": {"content": [{"token": label, "top_logprobs": logs}]}}]})
-
-        with tempfile.TemporaryDirectory(prefix="diawatch-calibration-test-") as temp_dir:
-            directory = Path(temp_dir)
-            train, calibration, test = [self.write_split(directory, name) for name in ("train", "calibration", "test")]
-            output = directory / "calibration.json"
-            client = httpx.Client(transport=httpx.MockTransport(respond))
-            self.addCleanup(client.close)
-            with patch.object(evaluation.httpx, "Client", return_value=client), redirect_stdout(io.StringIO()):
-                evaluation.calibrate(train, calibration, test, "synthetic-test-only", 0.2, 0.8,
-                                     "Synthetic fixture thresholds, not medical cutoffs", output=output)
-            with patch.object(ai, "CALIBRATION_PATH", output):
-                artifact = ai.load_calibration("synthetic-test-only")
-                self.assertIsNotNone(artifact)
-                self.assertIsNone(ai.load_calibration("different-model"))
-                score = ai.calibrated_score(2.0, artifact)
-                assert score is not None
-                self.assertGreater(score["percent"], 80)
-                # A changed artifact must not silently become an active score.
-                edited = json.loads(output.read_text())
-                edited["high_threshold"] = 0.9
-                output.write_text(json.dumps(edited))
-                self.assertIsNone(ai.load_calibration("synthetic-test-only"))
-
-    def test_overlapping_split_ids_are_rejected_before_model_call(self):
-        if not evaluation.USING_SKLEARN:
-            self.skipTest("Full calibration requires working sklearn")
-        with tempfile.TemporaryDirectory(prefix="diawatch-overlap-test-") as temp_dir:
-            path = self.write_split(Path(temp_dir), "same")
-            with patch.object(evaluation.httpx, "Client") as client, self.assertRaisesRegex(ValueError, "tumpang tindih"):
-                evaluation.calibrate(path, path, path, "fixture", 0.2, 0.8, "fixture")
-            client.assert_not_called()
 
 
 if __name__ == "__main__":

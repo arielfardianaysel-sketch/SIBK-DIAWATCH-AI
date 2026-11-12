@@ -1,10 +1,4 @@
-
-/**
- * DiaWatch AI — Detail Laporan Skrining
- * API: GET /api/history/{id}
- */
-
-import { getHistoryDetail, modelScore, requestRecommendations } from "./api.js";
+import { getHistoryDetail, screeningLabel, requestRecommendations } from "./api.js";
 
 if (typeof window.guard === "function") {
   window.guard();
@@ -158,23 +152,13 @@ const questionGroups = [
 ];
 
 function renderSummary(report) {
-  const score = modelScore(report);
   const label = report.predicted_label === 0 || report.predicted_label === 1 ? report.predicted_label : null;
 
   const isPositive = label === 1;
   const isNegative = label === 0;
 
-  const categoryText = isPositive
-    ? "Indikasi ditemukan"
-    : isNegative
-      ? "Indikasi tidak ditemukan"
-      : "Tidak tersedia";
-
-  const categoryDesc = isPositive
-    ? "Prediabetes / diabetes (label survei)"
-    : isNegative
-      ? "Tidak diabetes (label survei)"
-      : "Hasil klasifikasi tidak tersedia";
+  const categoryText = screeningLabel(label);
+  const categoryDesc = "Berdasarkan jawaban kuesioner, bukan diagnosis medis.";
 
   const pillClass = isPositive
     ? "high"
@@ -192,9 +176,6 @@ function renderSummary(report) {
       </div>
       <p class="note" style="margin-top:.6rem">
         ${esc(categoryDesc)}
-      </p>
-      <p class="note" style="margin-top:.6rem">
-        ${score ? `<strong>${score.percent.toFixed(1)}% · skor ${esc(score.category)}</strong><br>Skor model terkalibrasi, bukan risiko klinis.` : 'Persentase dan level belum tersedia; kalibrasi model belum lengkap.'}
       </p>
     </div>
 
@@ -261,9 +242,6 @@ function renderExplanation(report) {
     <p class="note" style="margin-top:1rem">
       <b>Model:</b>
       ${esc(report.model_name || "Qwen DiaWatch")}
-    </p>
-    <p class="note" style="margin-top:.5rem">
-      ${modelScore(report) ? 'Persentase adalah skor model terhadap label survei. Skor ini bukan diagnosis atau peluang pasti terkena diabetes.' : 'Persentase tidak diisi otomatis dari label 0/1. Skor dan level akan tersedia setelah kalibrasi serta evaluasi model.'}
     </p>
   `;
 }

@@ -1,7 +1,6 @@
 """Offline regression checks: no .env, live model, or database access."""
 import importlib
 import json
-import math
 import os
 import sys
 import unittest
@@ -141,7 +140,7 @@ class EndpointTests(unittest.TestCase):
         self.query.eq.assert_any_call("user_id", "test-owner")
         self.query.eq.assert_any_call("id", "other-record")
 
-    def test_prediction_preserves_null_score_and_stores_owner(self):
+    def test_prediction_returns_binary_result_and_stores_owner(self):
         self.login()
         self.query.execute.return_value = SimpleNamespace(data=[{
             "id": "new-record", "created_at": "2026-11-12T00:00:00Z",
@@ -151,12 +150,12 @@ class EndpointTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         result = response.json()
         self.assertEqual(result["prediction"]["predicted_label"], 1)
-        self.assertIsNone(result["prediction"]["experimental_score_percent"])
-        self.assertFalse(result["prediction"]["score_is_clinical_risk"])
+        self.assertNotIn("experimental_score_percent", result["prediction"])
+        self.assertEqual(result["prediction"]["meaning"], "Terindikasi diabetes")
         saved = self.query.insert.call_args.args[0]
         self.assertEqual(saved["user_id"], "test-owner")
         self.assertEqual(saved["questionnaire_answers"], ANSWERS)
-        self.assertIsNone(saved["experimental_score_percent"])
+        self.assertNotIn("experimental_score_percent", saved)
 
     def test_model_failure_does_not_write_database(self):
         self.login()
@@ -185,32 +184,17 @@ class EndpointTests(unittest.TestCase):
         self.assertEqual(response.json()["recommendation_status"], "unavailable")
         self.assertEqual(self.query.insert.call_args.args[0]["recommendations"], [])
 
-    def test_calibrated_prediction_persists_score_provenance(self):
-        self.login()
-        artifact = {"coefficient": 1, "intercept": 0, "low_threshold": 0.2,
-                    "high_threshold": 0.7, "calibration_id": "synthetic-endpoint-only"}
-        self.query.execute.return_value = SimpleNamespace(data=[{"id": "saved", "created_at": "now"}])
-        with patch.object(main, "load_calibration", return_value=artifact), \
-             patch.object(main, "request_classification", new=AsyncMock(return_value=(1, math.log(4)))):
-            response = self.client.post("/api/predict", json=ANSWERS)
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json()["prediction"]["experimental_score_percent"], 80.0)
-        saved = self.query.insert.call_args.args[0]
-        self.assertEqual(main.enrich_score(saved)["prediction"]["calibration_id"], "synthetic-endpoint-only")
-        self.assertTrue(all(item.get("kind") != "model_score" for item in response.json()["recommendations"]))
 
-    def test_regeneration_is_scoped_to_owner_and_preserves_score(self):
+    def test_regeneration_is_scoped_to_owner(self):
         self.login()
-        metadata = {"kind": "model_score", "percent": 70.0, "category": "tinggi", "calibration_id": "fixture-only"}
         record = {"id": "owned", "predicted_label": 1, "questionnaire_answers": ANSWERS,
-                  "experimental_score_percent": 70.0, "recommendations": [metadata]}
+                  "recommendations": []}
         self.query.execute.return_value = SimpleNamespace(data=[record])
         response = self.client.post("/api/history/owned/recommendations")
         self.assertEqual(response.status_code, 200)
         self.query.eq.assert_any_call("user_id", "test-owner")
         self.query.eq.assert_any_call("id", "owned")
         saved = self.query.update.call_args.args[0]["recommendations"]
-        self.assertEqual(saved[-1], metadata)
         self.assertEqual(saved[0]["generator"], "qwen-rag-v1")
 
     def test_regeneration_cannot_update_unowned_screening(self):
@@ -219,32 +203,6 @@ class EndpointTests(unittest.TestCase):
         response = self.client.post("/api/history/other/recommendations")
         self.assertEqual(response.status_code, 404)
         self.query.update.assert_not_called()
-
-
-class ModelScoreTests(unittest.TestCase):
-    def response(self, tokens):
-        return {"choices": [{"message": {"content": "1"}, "logprobs": {"content": tokens}}]}
-
-    def test_log_odds_require_both_labels_at_first_position(self):
-        tokens = [{"token": "1", "top_logprobs": [{"token": "0", "logprob": -2}, {"token": "1", "logprob": -0.5}]}]
-        self.assertEqual(ai.parse_classification(self.response(tokens)), (1, 1.5))
-        tokens[0]["top_logprobs"].pop()
-        self.assertEqual(ai.parse_classification(self.response(tokens)), (1, None))
-        self.assertEqual(ai.parse_classification(self.response([{"token": " "}] + tokens)), (1, None))
-
-    def test_absent_calibration_does_not_fabricate_percent(self):
-        self.assertIsNone(ai.calibrated_score(2.0, None))
-        self.assertIsNone(ai.load_calibration(""))
-        self.assertIsNone(ai.score_from_record({"experimental_score_percent": 85, "recommendations": []}))
-
-    def test_score_and_category_use_fitted_parameters(self):
-        artifact = {"coefficient": 1, "intercept": 0, "low_threshold": 0.2,
-                    "high_threshold": 0.7, "calibration_id": "synthetic-test-only"}
-        score = ai.calibrated_score(math.log(4), artifact)
-        assert score is not None
-        self.assertEqual(score["percent"], 80.0)
-        self.assertEqual(score["category"], "tinggi")
-        self.assertFalse(score["score_is_clinical_risk"])
 
 
 class RecommendationTests(unittest.IsolatedAsyncioTestCase):
