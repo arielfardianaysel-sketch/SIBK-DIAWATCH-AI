@@ -62,52 +62,21 @@ Rujukan implementasi: [llama.cpp server](https://github.com/ggml-org/llama.cpp/b
 [CDC merokok](https://www.cdc.gov/diabetes/risk-factors/diabetes-and-smoking.html),
 [CDC pencegahan](https://www.cdc.gov/diabetes/prevention-type-2/index.html).
 
-## Skor persentase dan level
+## Hasil skrining dan evaluasi
 
-Label `0/1` tidak otomatis menjadi `0%/100%` atau level risiko. Backend hanya
-menampilkan persentase setelah ada artefak kalibrasi yang cocok dengan versi model
-dan prompt. Tanpa artefak, laporan menampilkan indikasi klasifikasi serta keterangan
-bahwa skor/level belum tersedia. Angka pengganti dashboard telah dihapus.
+Dashboard, riwayat, dan laporan menampilkan **Terindikasi diabetes** atau
+**Tidak terindikasi diabetes** berdasarkan label Qwen + adapter DiaWatch.
+Hasil bukan diagnosis; label positif dataset mencakup prediabetes/diabetes.
+Tidak ada persentase atau level risiko yang dihitung.
 
-Mode evaluasi lama tetap tersedia:
+Evaluasi klasifikasi biasa tetap tersedia untuk kebutuhan akademik:
 
 ```bash
 backend/.venv-linux/bin/python backend/evaluate_model.py
 ```
 
-Mode kalibrasi membutuhkan ekspor **split asli dari notebook pelatihan**: CSV train,
-calibration, dan test dengan `row_id` asal, 17 fitur di `questionnaire.FEATURES`,
-serta `Diabetes_binary` atau `target`. Jangan membuat ulang row_id per split.
-Ketiga split wajib terpisah; calibration dan test masing-masing minimal 30 baris
-per kelas. Jumlah ini batas teknis awal, bukan jaminan validitas penelitian.
-
-Jalankan `evaluate_model.py --help` untuk parameter `--calibrate`, `--train-csv`,
-`--calibration-csv`, `--test-csv`, `--model-revision`, `--low-threshold`,
-`--high-threshold`, dan `--threshold-rationale`. Ambang harus ditetapkan dengan
-alasan penelitian sebelum melihat test; tidak ada ambang klinis bawaan.
-`--model-revision` harus mengidentifikasi base GGUF, adapter, serta konfigurasi
-server yang dipakai; gunakan digest/revisi yang sama saat melayani prediksi.
-
-Skor mentah adalah selisih logprob token `1` dan `0` pada posisi pertama. Jika
-salah satu token tidak tersedia, proses berhenti. Kalibrasi sigmoid dipasang pada
-split calibration dan dinilai pada test melalui Brier, log loss, ROC AUC, precision,
-recall, F1, dan reliability bins. Artefak `backend/calibration.json` hanya ditulis
-jika Brier test tidak memburuk dan ROC AUC di atas 0.5; kriteria ini bukan validasi
-klinis. Jangan memasang kalibrasi dari data tes atau membuat artefak secara manual.
-
-Untuk mengaktifkan artefak yang sudah ditinjau, set variabel proses
-`DIAWATCH_MODEL_REVISION` sama dengan revisi saat kalibrasi sebelum menjalankan
-backend. Tidak perlu mengedit `.env`. Backend memverifikasi fingerprint dan
-checksum artefak. Identitas model server tetap harus sesuai dengan revisi yang
-dideklarasikan; pergantian model/adapter membutuhkan kalibrasi ulang.
-
-Level rendah/sedang/tinggi adalah **band skor model**, bukan kepastian atau peluang
-diabetes masa depan. Skor, ambang, dan ID kalibrasi disimpan sebagai entri bertag
-`kind: model_score` di JSON `screenings.recommendations` yang sudah ada; tidak ada
-migrasi database. Frontend memisahkan entri metadata tersebut dari kartu saran.
-Laporan lama tidak diberi skor atau level baru secara retroaktif.
-
-Rujukan: [kalibrasi scikit-learn](https://scikit-learn.org/stable/modules/calibration.html).
+Evaluasi ini menghasilkan Accuracy, Precision, Recall, F1, CSV prediksi dan
+confusion matrix. Evaluasi dijalankan terpisah dan tidak diperlukan saat website berjalan.
 
 ## Pengujian
 
@@ -127,7 +96,31 @@ konfigurasi lama tidak mengalihkan permintaan jaringan.
 
 Endpoint backend: `GET /health`, `POST /api/predict`, `GET /api/history`,
 `GET /api/history/{id}`, dan `POST /api/history/{id}/recommendations`.
-Health melaporkan kesiapan knowledge base dan kalibrasi, bukan bukti model aktif.
+Health melaporkan kesiapan knowledge base, bukan bukti model aktif.
 Penghapusan riwayat menggunakan Supabase dan bergantung
 pada RLS. Konfigurasi rahasia tetap dikelola secara lokal; jangan memasukkannya
 ke dokumentasi atau commit.
+
+## Profil akun
+
+Klik nama pengguna di navigasi untuk membuka `profile.html`.
+Nama dan tanggal lahir diperbarui melalui metadata Supabase Auth lalu otomatis
+tersinkron ke `public.profiles` (`id`, `display_name`, `birth_date`, `created_at`)
+melalui trigger database, dalam transaksi yang sama. Halaman profil membaca tabel ini.
+Usia skrining berikutnya mengikuti tanggal lahir baru; riwayat lama tidak ditulis ulang.
+
+SQL sinkronisasi tersedia di `backend/sql/sync_profiles.sql` dan diterapkan sekali
+pada proyek Supabase. Kolom `birth_date` ditambahkan pada tabel yang sudah ada;
+akun lama disinkronkan dari metadata. Tanggal tidak valid disimpan sebagai NULL
+agar tidak memblokir registrasi lama. RLS membatasi pembacaan ke pemilik akun;
+frontend tetap menyimpan perubahan melalui Auth, bukan menulis tabel secara langsung.
+Email dan password tidak disalin ke `profiles`.
+
+Email dan password diperbarui melalui Supabase Auth untuk akun yang sedang login.
+Email aktif tidak diganti secara lokal sebelum Supabase mengonfirmasi perubahan.
+Jika konfirmasi email diaktifkan, selesaikan tautan yang dikirim sesuai pengaturan
+proyek. Daftarkan `http://localhost:5500/profile.html` dan
+`http://127.0.0.1:5500/profile.html` di Authentication → URL Configuration → Redirect URLs
+agar tautan konfirmasi dapat kembali ke halaman profil.
+Password saat ini diverifikasi sebelum pembaruan; form password dikosongkan setelah
+permintaan selesai. Password tidak disimpan di localStorage atau tabel profil.

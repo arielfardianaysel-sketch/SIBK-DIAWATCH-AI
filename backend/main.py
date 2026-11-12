@@ -10,15 +10,14 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from supabase import create_client
 
 from questionnaire import ScreeningForm, features_from_form
-from ai import (AIUnavailable, calibrated_score, classification_payload, generate_recommendations,
-                load_calibration, load_knowledge, parse_classification, score_from_record)
+from ai import (AIUnavailable, classification_payload, generate_recommendations,
+                load_knowledge, parse_classification)
 
 load_dotenv(Path(__file__).resolve().parent / ".env")
 SUPABASE_URL = os.getenv("SUPABASE_URL", "").strip()
 SUPABASE_PUBLISHABLE_KEY = os.getenv("SUPABASE_PUBLISHABLE_KEY", "").strip()
 SUPABASE_SECRET_KEY = os.getenv("SUPABASE_SECRET_KEY", "").strip()
 LLM_URL = os.getenv("LLM_URL", "http://127.0.0.1:8080").rstrip("/")
-MODEL_REVISION = os.getenv("DIAWATCH_MODEL_REVISION", "").strip()
 
 app = FastAPI(title="DiaWatch API", version="0.1.0")
 allowed_origins = os.getenv(
@@ -68,7 +67,6 @@ def health():
         "supabase_configured": bool(SUPABASE_URL and SUPABASE_PUBLISHABLE_KEY and SUPABASE_SECRET_KEY),
         "llm_url": LLM_URL,
         "knowledge_base_ready": bool(load_knowledge()),
-        "calibration_ready": load_calibration(MODEL_REVISION) is not None,
     }
 
 
@@ -78,7 +76,7 @@ def get_history(user_id: str = Depends(get_authenticated_user)):
     try:
         result = (
             db.table("screenings")
-            .select("id,created_at,bmi,predicted_label,experimental_score_percent,model_name,recommendations")
+            .select("id,created_at,bmi,predicted_label,model_name")
             .eq("user_id", user_id)
             .order("created_at", desc=True)
             .execute()
@@ -87,7 +85,7 @@ def get_history(user_id: str = Depends(get_authenticated_user)):
         for row in result.data or []:
             if not isinstance(row, dict):
                 raise ValueError("Invalid screening row")
-            item = enrich_score(row)
+            item = dict(row)
             item.pop("recommendations", None)
             items.append(item)
         return {"items": items}
@@ -112,34 +110,23 @@ def get_history_detail(screening_id: str, user_id: str = Depends(get_authenticat
     record = result.data[0]
     if not isinstance(record, dict):
         raise HTTPException(status_code=502, detail="Format laporan tidak valid")
-    return enrich_score(record)
+    return public_screening(record)
 
 
-def enrich_score(row: dict) -> dict:
-    result = dict(row)
-    score = score_from_record(row)
-    if score:
-        result["prediction"] = {"predicted_label": row["predicted_label"],
-                                "experimental_score_percent": score["percent"],
-                                "risk_category": score["category"], "calibration_id": score["calibration_id"],
-                                "score_is_clinical_risk": False, "score_status": "calibrated"}
+def public_screening(record: dict) -> dict:
+    # Ignore legacy score metadata without changing stored history or schema.
+    result = dict(record)
+    result.pop("experimental_score_percent", None)
+    result["recommendations"] = [tip for tip in record.get("recommendations") or []
+                                 if not isinstance(tip, dict) or tip.get("kind") != "model_score"]
     return result
 
 
 async def predict_via_llama(features: dict) -> int:
-    """Prediksi kategorikal dari server llama.cpp (model + adapter WAJIB telah di-load)."""
-    label, _ = await request_classification(features)
-    return label
-
-
-async def request_classification(features: dict, *, scores: bool = False) -> tuple[int, float | None]:
+    """Prediksi label 0/1 menggunakan model dan adapter llama.cpp yang aktif."""
     try:
         async with httpx.AsyncClient(timeout=httpx.Timeout(180, connect=5), trust_env=False) as client:
-            result = await client.post(f"{LLM_URL}/v1/chat/completions", json=classification_payload(features, scores=scores))
-            if scores and result.status_code in (400, 422):
-                # Older llama.cpp may not support logprobs. Preserve classification
-                # while leaving the score unavailable, rather than inventing it.
-                result = await client.post(f"{LLM_URL}/v1/chat/completions", json=classification_payload(features))
+            result = await client.post(f"{LLM_URL}/v1/chat/completions", json=classification_payload(features))
             result.raise_for_status()
     except (httpx.HTTPError, KeyError, IndexError, TypeError, ValueError) as exc:
         raise HTTPException(status_code=503, detail="Qwen lokal belum siap atau gagal merespons") from exc
@@ -152,13 +139,7 @@ async def request_classification(features: dict, *, scores: bool = False) -> tup
 @app.post("/api/predict")
 async def predict(form: ScreeningForm, user_id: str = Depends(get_authenticated_user)):
     features, bmi = features_from_form(form)
-    artifact = load_calibration(MODEL_REVISION)
-    score = None
-    if artifact:
-        label, log_odds = await request_classification(features, scores=True)
-        score = calibrated_score(log_odds, artifact)
-    else:
-        label = await predict_via_llama(features)
+    label = await predict_via_llama(features)
     recommendation_error = None
     try:
         tips = await generate_recommendations(form, bmi, label, LLM_URL)
@@ -171,10 +152,7 @@ async def predict(form: ScreeningForm, user_id: str = Depends(get_authenticated_
         "questionnaire_version": "v1",
         "bmi": bmi,
         "predicted_label": label,
-        "experimental_score_percent": score["percent"] if score else None,
-        # A tagged metadata entry preserves score provenance in the existing JSON
-        # column, without adding columns or reinterpreting older screening rows.
-        "recommendations": tips + ([score] if score else []),
+        "recommendations": tips,
         "model_name": "Qwen3-4B-Instruct-2507 + DiaWatch LoRA (GGUF)",
     }
     _, db = get_supabase_clients()
@@ -191,12 +169,7 @@ async def predict(form: ScreeningForm, user_id: str = Depends(get_authenticated_
         "bmi": bmi,
         "prediction": {
             "predicted_label": label,
-            "meaning": "Prediabetes/diabetes pada label data survei" if label == 1 else "Tidak diabetes pada label data survei",
-            "experimental_score_percent": score["percent"] if score else None,
-            "risk_category": score["category"] if score else None,
-            "score_status": "calibrated" if score else "unavailable",
-            "calibration_id": score["calibration_id"] if score else None,
-            "score_is_clinical_risk": False,
+            "meaning": "Terindikasi diabetes" if label == 1 else "Tidak terindikasi diabetes",
         },
         "recommendations": tips,
         "recommendation_status": "generated" if tips else "unavailable",
@@ -219,10 +192,9 @@ async def regenerate_recommendations(screening_id: str, user_id: str = Depends(g
         tips = await generate_recommendations(form, bmi, record["predicted_label"], LLM_URL)
     except AIUnavailable as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
-    score = score_from_record(record)
     _, db = get_supabase_clients()
     try:
-        result = (db.table("screenings").update({"recommendations": tips + ([score] if score else [])})
+        result = (db.table("screenings").update({"recommendations": tips})
                   .eq("user_id", user_id).eq("id", screening_id).execute())
     except Exception as exc:
         raise HTTPException(status_code=502, detail="Saran AI dibuat tetapi gagal disimpan") from exc

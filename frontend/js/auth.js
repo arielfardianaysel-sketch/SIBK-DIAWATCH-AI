@@ -1,6 +1,3 @@
-/**
- * DiaWatch AI - Authentication Controller (Login & Register via Supabase Auth)
- */
 import { API, registerUser, loginUser, getMyProfile } from "./api.js";
 
 // If already logged in, redirect to index

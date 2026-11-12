@@ -1,5 +1,3 @@
-// DiaWatch integration for vanilla HTML/JavaScript. Browser/public keys only.
-// IMPORTANT: Never paste sb_secret_*, service_role, or your database password here.
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.0/+esm';
 
 const SUPABASE_URL = 'https://vdtrtpqktkijqfmpcyow.supabase.co';
@@ -50,7 +48,7 @@ export async function getMyProfile() {
   const user = await currentUser();
   if (!user) throw new Error('Belum login.');
   const { data, error } = await supabase.from('profiles')
-    .select('id,display_name,created_at').eq('id', user.id).maybeSingle();
+    .select('id,display_name,birth_date,created_at').eq('id', user.id).maybeSingle();
   if (error) throw error;
   return data;
 }
@@ -110,4 +108,32 @@ export async function deleteMyScreening(id) {
   // Supabase RLS allows users to delete only their own history entries.
   const { error } = await supabase.from('screenings').delete().eq('id', id);
   if (error) throw error;
+}
+
+// Account changes use the signed-in user's Auth session, never an admin key.
+export async function updateAccountDetails(displayName, birthDate) {
+  const { data, error } = await supabase.auth.updateUser({
+    data: { display_name: displayName, birth_date: birthDate },
+  });
+  if (error) throw error;
+  return data.user;
+}
+
+export async function updateAccountEmail(email) {
+  const { data, error } = await supabase.auth.updateUser({ email }, {
+    emailRedirectTo: `${location.origin}/profile.html`,
+  });
+  if (error) throw error;
+  return data.user;
+}
+
+export async function updateAccountPassword(currentPassword, newPassword) {
+  const user = await currentUser();
+  if (!user?.email) throw new Error('Silakan masuk kembali sebelum mengganti kata sandi.');
+  const verified = await supabase.auth.signInWithPassword({ email: user.email, password: currentPassword });
+  if (verified.error) throw new Error('Kata sandi saat ini salah atau verifikasi akun gagal.');
+  if (verified.data.user?.id !== user.id) throw new Error('Verifikasi akun gagal. Silakan masuk kembali.');
+  const { data, error } = await supabase.auth.updateUser({ password: newPassword });
+  if (error) throw error;
+  return data.user;
 }

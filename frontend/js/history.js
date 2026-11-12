@@ -1,10 +1,4 @@
-/**
- * DiaWatch AI — Riwayat kuesioner / skrining pribadi.
- * Cocok dengan GET /api/history => { items: [...] } maupun API helper yang
- * mengembalikan array secara langsung.
- * Menggunakan CSS class DiaWatch yang sudah ada; tidak perlu mengganti style.css.
- */
-import { getHistory, deleteMyScreening, modelScore } from './api.js';
+import { getHistory, deleteMyScreening, screeningLabel } from './api.js';
 
 // Autentikasi tetap divalidasi oleh FastAPI; guard() hanya membantu navigasi UI.
 if (typeof window.guard === 'function') window.guard();
@@ -34,7 +28,6 @@ function normalizeItem(raw) {
     predicted_label: label,
     bmi: nullableNumber(raw?.bmi ?? raw?.answers?.BMI ?? raw?.questionnaire_answers?.BMI),
     model_name: raw?.model_name ?? 'Qwen DiaWatch',
-    score: modelScore(raw),
   };
 }
 
@@ -48,8 +41,8 @@ function formatDate(isoString) {
 }
 
 function labelMeta(label) {
-  if (label === 1) return { css: 'high', text: 'Kelas 1 · Prediabetes/diabetes' };
-  if (label === 0) return { css: 'low', text: 'Kelas 0 · Tidak diabetes' };
+  if (label === 1) return { css: 'high', text: screeningLabel(1) };
+  if (label === 0) return { css: 'low', text: screeningLabel(0) };
   return { css: '', text: 'Label belum tersedia' };
 }
 
@@ -61,16 +54,16 @@ function displayHistoryComparison(item, previous) {
   if (!previous) return 'Skrining pertama yang tersimpan';
   if (item.predicted_label !== null && previous.predicted_label !== null) {
     if (item.predicted_label !== previous.predicted_label) {
-      return `Hasil klasifikasi berubah dari kelas ${previous.predicted_label} menjadi kelas ${item.predicted_label}`;
+      return `Hasil berubah: ${screeningLabel(previous.predicted_label)} → ${screeningLabel(item.predicted_label)}`;
     }
     if (item.bmi !== null && previous.bmi !== null) {
       const diff = item.bmi - previous.bmi;
       const sign = diff > 0 ? '+' : '';
       if (Math.abs(diff) > 0.001) {
-        return `Kelas tetap ${item.predicted_label} · Perubahan BMI ${sign}${diff.toFixed(1)} kg/m²`;
+        return `Hasil tetap sama · Perubahan BMI ${sign}${diff.toFixed(1)} kg/m²`;
       }
     }
-    return `Hasil klasifikasi sama dengan pemeriksaan sebelumnya (kelas ${item.predicted_label})`;
+    return 'Hasil klasifikasi sama dengan pemeriksaan sebelumnya';
   }
   return 'Catatan tersedia untuk dibandingkan dengan pemeriksaan berikutnya';
 }
@@ -162,7 +155,6 @@ function renderItems(items) {
           <p class="note" style="margin-top:0.25rem;font-size:0.82rem">
             Model: ${safeModel}
           </p>
-          <p class="note">${item.score ? `${item.score.percent.toFixed(1)}% · skor ${escapeHtml(item.score.category)} (model, bukan risiko klinis)` : 'Persentase dan level belum tersedia'}</p>
         </div>
         <div style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap">
           ${details}
