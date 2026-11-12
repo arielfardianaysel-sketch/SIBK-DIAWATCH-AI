@@ -99,8 +99,6 @@ export async function getHistoryDetail(id) {
 }
 
 export async function submitScreening(answers) {
-  // Important: Current backend path is /api/predict, not /api/screenings.
-  // Qwen llama-server must be running before this function can succeed.
   return backendRequest('/api/predict', { method: 'POST', body: answers });
 }
 
