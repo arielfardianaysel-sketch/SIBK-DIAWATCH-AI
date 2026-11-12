@@ -57,7 +57,7 @@ export async function requestRecommendations(id) {
 }
 
 /**
- * Menentukan faktor risiko utama dari jawaban kuesioner.
+ * Menentukan faktor risiko utama dari jawaban skrining.
  */
 export function extractTopFactors(answers = {}, bmiVal = null) {
   const bmi = Number(bmiVal ?? answers.BMI ?? answers.bmi ?? 0);
@@ -77,10 +77,7 @@ export function extractTopFactors(answers = {}, bmiVal = null) {
   return factors.slice(0, 4);
 }
 
-/**
- * Normalisasi satu item riwayat dari GET /api/history atau GET /api/history/{id}
- * ataupun hasil POST /api/predict agar seragam di seluruh halaman UI.
- */
+
 export function normalizeHistoryItem(item, fallbackAnswers = null) {
   if (!item) return null;
 

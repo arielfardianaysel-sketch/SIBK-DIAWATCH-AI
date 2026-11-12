@@ -158,7 +158,7 @@ function renderSummary(report) {
   const isNegative = label === 0;
 
   const categoryText = screeningLabel(label);
-  const categoryDesc = "Berdasarkan jawaban kuesioner, bukan diagnosis medis.";
+  const categoryDesc = "Berdasarkan jawaban skrining, bukan diagnosis medis.";
 
   const pillClass = isPositive
     ? "high"
@@ -252,7 +252,7 @@ function renderAnswers(report) {
   if (!answers || Object.keys(answers).length === 0) {
     answersEl.innerHTML = `
       <p class="note">
-        Jawaban kuesioner tidak tersedia.
+        Jawaban skrining tidak tersedia.
       </p>
     `;
     return;

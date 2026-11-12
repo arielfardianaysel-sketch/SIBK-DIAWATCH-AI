@@ -83,7 +83,7 @@ function renderEmpty() {
       </div>
       <h2 style="font-size:1.35rem;margin-bottom:0.5rem">Belum Ada Riwayat Skrining</h2>
       <p class="note" style="max-width:440px;margin:0 auto 1.5rem">
-        Kuesioner yang telah kamu selesaikan akan tersimpan di sini, bersama hasil klasifikasi dan saran personal.
+        Skrining yang telah kamu selesaikan akan tersimpan di sini, bersama hasil klasifikasi dan saran personal.
       </p>
       <a class="btn" href="screening.html">Mulai Skrining Pertama</a>
     </div>`;
@@ -99,7 +99,7 @@ function renderSummary(items) {
   summaryEl.innerHTML = `
     <div class="dash-card">
       <div class="dash-card-header">
-        <span class="dash-card-label">Total Kuesioner</span>
+        <span class="dash-card-label">Total Skrining</span>
         <div class="dash-card-icon" aria-hidden="true">📋</div>
       </div>
       <div class="dash-card-val">${items.length} kali</div>
