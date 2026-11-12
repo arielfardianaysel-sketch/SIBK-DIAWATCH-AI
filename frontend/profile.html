@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Profil Saya | DiaWatch AI</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div id="nav"></div>
+  <main class="wrap wrap-narrow">
+    <h1>Profil Saya</h1>
+    <p class="note" style="margin-bottom:1.5rem">Kelola data diri dan keamanan akun DiaWatch Anda.</p>
+    <p id="profile-loading" role="status">Memuat profil...</p>
+    <div id="profile-error" class="err hide" role="alert"></div>
+    <div id="profile-content" hidden>
+      <form id="profile-details" class="card" style="margin-bottom:1.5rem">
+        <h2>Data Diri</h2>
+        <div class="form-group">
+          <label for="profile-name">Nama Lengkap</label>
+          <input id="profile-name" name="display_name" required minlength="2" maxlength="100" autocomplete="name">
+        </div>
+        <div class="form-group">
+          <label for="profile-birth">Tanggal Lahir</label>
+          <input id="profile-birth" name="birth_date" type="date" required autocomplete="bday">
+          <span class="hint">Usia pada skrining berikutnya dihitung otomatis dari tanggal lahir ini. Laporan lama tetap menggunakan data saat pemeriksaan.</span>
+        </div>
+        <button class="btn" type="submit">Simpan Data Diri</button>
+        <p class="note" data-feedback role="status" aria-live="polite" style="margin-top:1rem"></p>
+      </form>
+      <form id="profile-email" class="card" style="margin-bottom:1.5rem">
+        <h2>Alamat Email</h2>
+        <p class="note" id="current-email" style="margin-bottom:1rem"></p>
+        <p class="note" id="pending-email" style="margin-bottom:1rem" hidden></p>
+        <div class="form-group">
+          <label for="profile-new-email">Email Baru</label>
+          <input id="profile-new-email" name="email" type="email" required autocomplete="email">
+          <span class="hint">Periksa email lama dan baru untuk konfirmasi jika diminta. Email login tetap yang lama sampai perubahan dikonfirmasi.</span>
+        </div>
+        <button class="btn" type="submit">Ubah Email</button>
+        <p class="note" data-feedback role="status" aria-live="polite" style="margin-top:1rem"></p>
+      </form>
+      <form id="profile-password" class="card" style="margin-bottom:1.5rem">
+        <h2>Kata Sandi</h2>
+        <div class="form-group">
+          <label for="profile-current-password">Kata Sandi Saat Ini</label>
+          <input id="profile-current-password" name="current_password" type="password" required autocomplete="current-password">
+        </div>
+        <div class="form-group">
+          <label for="profile-new-password">Kata Sandi Baru</label>
+          <input id="profile-new-password" name="password" type="password" required minlength="8" autocomplete="new-password">
+          <span class="hint">Minimal 8 karakter. Ikuti ketentuan tambahan jika diminta oleh layanan akun.</span>
+        </div>
+        <div class="form-group">
+          <label for="profile-confirm-password">Ulangi Kata Sandi Baru</label>
+          <input id="profile-confirm-password" name="confirm_password" type="password" required minlength="8" autocomplete="new-password">
+        </div>
+        <button class="btn" type="submit">Ubah Kata Sandi</button>
+        <p class="note" data-feedback role="status" aria-live="polite" style="margin-top:1rem"></p>
+      </form>
+    </div>
+  </main>
+  <footer class="footer"><div class="footer-container"><b>DiaWatch AI</b><a href="index.html">Kembali ke Beranda</a></div></footer>
+  <script src="js/config.js"></script>
+  <script src="js/common.js"></script>
+  <script type="module" src="js/api.js"></script>
+  <script type="module" src="js/profile.js"></script>
+</body>
+</html>

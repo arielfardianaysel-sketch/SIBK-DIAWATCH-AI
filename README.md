@@ -100,3 +100,27 @@ Health melaporkan kesiapan knowledge base, bukan bukti model aktif.
 Penghapusan riwayat menggunakan Supabase dan bergantung
 pada RLS. Konfigurasi rahasia tetap dikelola secara lokal; jangan memasukkannya
 ke dokumentasi atau commit.
+
+## Profil akun
+
+Klik nama pengguna di navigasi untuk membuka `profile.html`.
+Nama dan tanggal lahir diperbarui melalui metadata Supabase Auth lalu otomatis
+tersinkron ke `public.profiles` (`id`, `display_name`, `birth_date`, `created_at`)
+melalui trigger database, dalam transaksi yang sama. Halaman profil membaca tabel ini.
+Usia skrining berikutnya mengikuti tanggal lahir baru; riwayat lama tidak ditulis ulang.
+
+SQL sinkronisasi tersedia di `backend/sql/sync_profiles.sql` dan diterapkan sekali
+pada proyek Supabase. Kolom `birth_date` ditambahkan pada tabel yang sudah ada;
+akun lama disinkronkan dari metadata. Tanggal tidak valid disimpan sebagai NULL
+agar tidak memblokir registrasi lama. RLS membatasi pembacaan ke pemilik akun;
+frontend tetap menyimpan perubahan melalui Auth, bukan menulis tabel secara langsung.
+Email dan password tidak disalin ke `profiles`.
+
+Email dan password diperbarui melalui Supabase Auth untuk akun yang sedang login.
+Email aktif tidak diganti secara lokal sebelum Supabase mengonfirmasi perubahan.
+Jika konfirmasi email diaktifkan, selesaikan tautan yang dikirim sesuai pengaturan
+proyek. Daftarkan `http://localhost:5500/profile.html` dan
+`http://127.0.0.1:5500/profile.html` di Authentication → URL Configuration → Redirect URLs
+agar tautan konfirmasi dapat kembali ke halaman profil.
+Password saat ini diverifikasi sebelum pembaruan; form password dikosongkan setelah
+permintaan selesai. Password tidak disimpan di localStorage atau tabel profil.

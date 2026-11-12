@@ -115,10 +115,10 @@ function renderNav() {
 
     navActionsHtml = `
       <div class="nav-actions">
-        <div class="user-badge" title="${esc(session.user.email)}">
-          <span class="user-avatar">${initial}</span>
+        <a href="profile.html" class="user-badge" title="Buka profil ${esc(session.user.email)}">
+          <span class="user-avatar">${esc(initial)}</span>
           <span class="user-name">${esc(session.user.name)}</span>
-        </div>
+        </a>
         <button id="btn-logout" class="btn-logout" title="Keluar dari akun">
           ${ICONS.logout}
           <span>Keluar</span>
@@ -146,7 +146,7 @@ function renderNav() {
   }
 
   navContainer.outerHTML = `
-    <header class="nav-header">
+    <header id="nav" class="nav-header">
       <div class="nav-container">
         <a href="index.html" class="nav-brand">
           <div class="nav-brand-icon">${ICONS.heartPulse}</div>
